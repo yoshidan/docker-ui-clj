@@ -15,3 +15,4 @@ src/main/resources/public/js/app.js
 src/main/resources/public/js/out.js.map
 bower_components
 node_modules
+src/main/resources/public/assets/js
