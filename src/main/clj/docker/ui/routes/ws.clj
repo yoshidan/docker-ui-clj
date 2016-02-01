@@ -17,22 +17,23 @@
   (log/info  "close channel:" cause)
   (close! channel))
 
-(defn echo
+(defn docker-stats
   "A websocket requrest hander that returns server times repeatedly."
   [req]
   (if  (:websocket? req)
     (with-channel
       req channel
       (go-loop  []
-               (<! (timeout 1000))
                (let [{:keys  [message error]} (<! channel)]
-                 (if (or error  (nil? message))
+                 (if (or error (nil? message))
                    (close-channel! channel  "can't get request request from a client.")
-                   (if-not  (>! channel message)
-                     (close-channel! channel  "can't send server time.")
-                     (recur))))))
+                   (let [response  (vals @docker/docker-stats)] 
+                     (println response)
+                     (if-not  (>! channel response )
+                       (close-channel! channel  "can't send server time.")
+                       (recur)))))))
     "Not Supported (use websocket)"))
 
 (defroutes routes 
   (context "/ws" []
-    (GET "/health" [] echo )))
+    (GET "/docker/stats" [] docker-stats )))

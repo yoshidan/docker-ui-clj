@@ -11,6 +11,7 @@ pom.xml
 *.log
 .nrepl-port
 src/main/resources/public/js/out
+src/main/resources/public/css/out
 src/main/resources/public/js/app.js
 src/main/resources/public/js/out.js.map
 bower_components

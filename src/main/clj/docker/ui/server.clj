@@ -52,11 +52,16 @@
 (def ^:private http-handler
     (apply routes handlers))
 
+
 (defn -main  
   []
   (log/info "Starting stats request for docker")
   (->> (docker/ps)
-       (map #(async/go (fn [] (docker/stats (:Id %) (fn [temp] (log/info temp))  )))) 
+       (map (fn [container] 
+              (async/go-loop []
+               (async/<! (async/timeout 1000))
+               (docker/stats (apply str (rest (first (:Names container)))))
+               (recur))))
        (doall))
-  (log/info "Starting server on port 8080")
-  (run-server http-handler {:port 8080}) )
+  (log/info "Starting server on port 3000")
+  (run-server http-handler {:port 3000}) )

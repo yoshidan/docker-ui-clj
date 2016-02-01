@@ -5,6 +5,7 @@
                  [org.clojure/clojurescript "1.7.170"]
                  [reagent "0.6.0-alpha"]
                  [com.cognitect/transit-cljs "0.8.237"]
+                 [garden "1.3.0"]
                  ;server
                  [compojure "1.3.4"]
                  [ring  "1.4.0"]
@@ -35,14 +36,19 @@
             [lein-parent  "0.2.1"]
             [lein-ring "0.9.3"]
             [lein-environ "1.0.0"]
-            [lein-ancient "0.5.5"]] 
+            [lein-ancient "0.5.5"]
+            [lein-garden "0.2.6"]] 
 
   :cljsbuild {:builds {:app {:source-paths ["src/main/cljs"]
                              :compiler {:output-to     "src/main/resources/public/assets/js/app.js"
                                         :output-dir    "src/main/resources/public/assets/js/out"
                                         :source-map    "src/main/resources/public/assets/js/out.js.map"
                                         :optimizations :simple
-                                        :pretty-print  true}}}}
+                                        :pretty-print true}}}}
+  :garden {:builds [{:source-paths  ["src/main/css"]
+                     :stylesheet docker.ui.css/screen
+                     :compiler  {:output-to "src/main/resources/public/assets/css/out/screen.css"}
+                     :pretty-print? false}]}
 
   :profiles  {:dev {:env {:dev? true
                           :docker-tcp-address "192.168.99.100:2376"}}
