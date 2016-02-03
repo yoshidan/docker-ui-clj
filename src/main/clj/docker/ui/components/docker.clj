@@ -1,6 +1,7 @@
 (ns docker.ui.components.docker 
   (:require
    [clojure.java.io :as io]
+   [clojure.string :as string ]
    [org.httpkit.client :as http] 
    [docker.ui.components.failure :as f]
    [environ.core :refer [env] :as environ]
@@ -68,15 +69,37 @@
         cpu-percent (if (and (< 0 cpu-delta) (< 0 cpu-system-delta))  
                       (* 100 (* cpu-count (float (/ cpu-delta cpu-system-delta))))
                       0.0 )]
-     {:percent (format "%.2f" cpu-percent)}))
+     {:percent(format "%.2f%%" cpu-percent) }))
 
 (defn- with-memory-stats
   [id edn]
   (let [usage (->> (:memory_stats edn) (:usage))
         limit (->> (:memory_stats edn ) (:limit))]
-   {:percent (format "%.2f" (* 100 (float (/ usage limit)))) 
-    :usage (format "%d" (int (-> (/ usage 1024) (/ 1024))))
-    :limit (format "%.2f" (float (-> (/ limit 1024) (/ 1024) (/ 1024))))} ))
+   {:percent (format "%.2f%%" (* 100 (float (/ usage limit)))) 
+    :usage (format "%dMB" (-> (/ usage 1024) (/ 1024) (int)))
+    :limit (format "%.2fGB" (-> (/ limit 1024) (/ 1024) (/ 1024) (float)))} ))
+
+(defn- with-block-io-stats
+  [id edn]
+  (let [read-io (->> (:blkio_stats edn) 
+                     (:io_service_bytes_recursive)
+                     (filter #(= (:op %) "Read"))
+                     (map #(:value %))
+                     (reduce +))
+        write-io (->> (:blkio_stats edn ) 
+                      (:io_service_bytes_recursive)
+                      (filter #(= (:op %) "Write"))
+                      (map #(:value %))
+                      (reduce +))]
+    {:read-io (format "%dKB" (-> (/ read-io 1024) (int)))
+     :write-io (format "%dKB" (-> (/ write-io 1024) (int)))}))
+
+(defn- with-network-stats
+  [id edn]
+  (let [rx-bytes (->> (:networks edn) (vals) (map #(:rx_bytes %)) (reduce +) )
+        tx-bytes (->> (:networks edn) (vals) (map #(:tx_bytes %)) (reduce +))]
+   {:rx-bytes (format "%.2fMB" (-> (/ rx-bytes 1024) (/ 1024) (float) ))
+    :tx-bytes (format "%.2fMB" (-> (/ tx-bytes 1024) (/ 1024) (float))) }))
 
 (defn stats
   [id ] 
@@ -87,4 +110,25 @@
                        (swap! docker-stats assoc (keyword (str "id" id)) 
                                {:id id 
                                 :memory (with-memory-stats id edn)
+                                :network (with-network-stats id edn)
+                                :block-io (with-block-io-stats id edn)
                                 :cpu (with-cpu-stats id edn)} )))))))
+
+(defn summary
+  [details]
+  {:memory {:percent (->> (map #(Float/parseFloat (string/replace (:percent (:memory %)) #"%" "")) details) 
+                          (reduce +) (format "%.2f%%") ) 
+            :usage (->> (map #(Integer/parseInt (string/replace (:usage (:memory %)) #"MB" "")) details) 
+                        (reduce +) (format "%dMB") ) }
+   :cpu {:percent (->> (map #(Float/parseFloat (string/replace (:percent (:cpu %)) #"%" "")) details) 
+                       (reduce +) (format "%.2f%%") ) }
+   :network {:rx-bytes (->> (map #(Float/parseFloat (string/replace (:rx-bytes (:network %)) #"MB" "")) details) 
+                            (reduce +) (format "%.2fMB") ) 
+             :tx-bytes (->> (map #(Float/parseFloat (string/replace (:tx-bytes (:network %)) #"MB" "")) details) 
+                            (reduce +) (format "%.2fMB") ) }
+   :block-io {:read-io (->> (map #(Integer/parseInt (string/replace (:read-io (:block-io %)) #"KB" "")) details) 
+                            (reduce +) (format "%dKB") ) 
+              :write-io (->> (map #(Integer/parseInt (string/replace (:write-io (:block-io %)) #"KB" "")) details) 
+                             (reduce +) (format "%dKB") ) }})
+
+

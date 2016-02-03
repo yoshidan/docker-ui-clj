@@ -27,7 +27,9 @@
                (let [{:keys  [message error]} (<! channel)]
                  (if (or error (nil? message))
                    (close-channel! channel  "can't get request request from a client.")
-                   (let [response  (vals @docker/docker-stats)] 
+                   (let [detail (vals @docker/docker-stats)
+                         response {:summary (docker/summary detail)
+                                   :detail detail}] 
                      (println response)
                      (if-not  (>! channel response )
                        (close-channel! channel  "can't send server time.")

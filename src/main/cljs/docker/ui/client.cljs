@@ -11,12 +11,14 @@
 
 (enable-console-print!)
 
-(def docker-stats  (reagent/atom {:stats []}))
+(def docker-stats  (reagent/atom {:stats {}}))
 
 (defn- container-list []
   (js/console.log (:stats @docker-stats))
   [:div 
-   [:table 
+   [:h1 "Docker I/O"]
+[:div 
+   [:table.table.table-hover
     [:thead
      [:tr 
       [:th "CONTAINER"]
@@ -26,14 +28,24 @@
       [:th "NET I/O"]
       [:th "BLOCK I/O"]]]
     [:tbody 
-     (for [container (:stats @docker-stats) ]
+     (for [container (:detail (:stats @docker-stats)) ]
        [:tr 
         [:td (:id container) ]
-        [:td (str (:percent (:cpu container)) "%" )]
-        [:td (str (:usage (:memory container)) "MB / " (:limit (:memory container)) "GB" )]
-        [:td (str (:percent (:memory container)) "%" )]
-        [:td (:net-io container)]
-        [:td (:block-io container)]])]]])
+        [:td (str (:percent (:cpu container)))]
+        [:td (str (:usage (:memory container)) " / " (:limit (:memory container)))]
+        [:td (str (:percent (:memory container)))]
+        [:td (str (:rx-bytes (:network container)) " / " (:tx-bytes (:network container)) )]
+        [:td (str (:read-io (:block-io container)) " / " (:write-io (:block-io container)) )]])]
+    (let [summary (:summary (:stats @docker-stats))] 
+      [:tfoot
+       [:tr 
+        [:th "SUM" ]
+        [:td (:percent (:cpu summary)) ]
+        [:td (:usage (:memory summary)) ]
+        [:td (:percent (:memory summary))]
+        [:td (str (:rx-bytes (:network summary)) " / " (:tx-bytes (:network summary)) )]
+        [:td (str (:read-io (:block-io summary)) " / " (:write-io (:block-io summary)) )]
+        ]])]]] )
 
 (defn- main-app
   "ルート"

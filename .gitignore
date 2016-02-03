@@ -10,10 +10,4 @@ pom.xml
 /.env
 *.log
 .nrepl-port
-src/main/resources/public/js/out
-src/main/resources/public/css/out
-src/main/resources/public/js/app.js
-src/main/resources/public/js/out.js.map
-bower_components
-node_modules
-src/main/resources/public/assets/js
+src/main/resources/public/assets
