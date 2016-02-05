@@ -104,17 +104,29 @@
 (defn stats
   [container] 
   (let [id (apply str (rest (first (:Names container))))
-        url (format "http://%s/containers/%s/stats" docker-tcp-address id)]
-      (let [rdr (io/reader url)] 
-        ;停止中のコンテナはここでブロックされるので情報更新不可
-        (readLine rdr (fn [data]
-                        (let [edn (json/parse-string data true)]
-                          (swap! docker-stats assoc (keyword (str "id" id)) 
-                                 {:id id 
-                                  :memory (with-memory-stats id edn)
-                                  :network (with-network-stats id edn)
-                                  :block-io (with-block-io-stats id edn)
-                                  :cpu (with-cpu-stats id edn)} )))))))
+        url (format "http://%s/containers/%s/stats" docker-tcp-address id)
+        #^java.net.URLConnection con (->> (java.net.URL. url) (.openConnection)  )]
+    (.setReadTimeout con 3000) 
+    ;停止中のコンテナはreadTimeoutになる
+    (try (readLine (io/reader (.getInputStream con )) 
+                   (fn [data]
+                     (let [edn (json/parse-string data true)]
+                       (swap! docker-stats assoc (keyword (str "id" id)) 
+                              {:id id 
+                               :down false
+                               :memory (with-memory-stats id edn)
+                               :network (with-network-stats id edn)
+                               :block-io (with-block-io-stats id edn)
+                               :cpu (with-cpu-stats id edn)} ))))
+         (catch Exception e
+           (swap! docker-stats assoc (keyword (str "id" id)) 
+                  {:id id 
+                   :down true
+                   :memory {:percent "0%" :usage "0MB" :limit "0GB"}
+                   :network {:rx-bytes "0MB" :tx-bytes "0MB"} 
+                   :block-io {:read-io "0KB" :write-io "0KB"} 
+                   :cpu {:percent "0%"}} ))))
+  (recur container) )
 
 (defn summary
   [details]
