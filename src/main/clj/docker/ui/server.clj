@@ -56,12 +56,9 @@
 (defn -main  
   []
   (log/info "Starting stats request for docker")
-  (->> (docker/ps)
-       (map (fn [container] 
-              (async/go-loop []
-               (async/<! (async/timeout 1000))
-               (docker/stats (apply str (rest (first (:Names container)))))
-               (recur))))
-       (doall))
+  (async/go
+   (->> (docker/ps)
+        (pmap #(docker/stats %))
+        (doall)))
   (log/info "Starting server on port 3000")
   (run-server http-handler {:port 3000}) )

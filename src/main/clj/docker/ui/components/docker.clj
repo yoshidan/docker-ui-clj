@@ -37,9 +37,9 @@
       (f/fail "external system status error") ))))
 
 (defn ps
-  "Up状態の全コンテナ取得"
+  "全コンテナ取得"
   []
-  (let [url (format "http://%s/containers/json" docker-tcp-address) ]
+  (let [url (format "http://%s/containers/json?all=1" docker-tcp-address) ]
     (log/infof url)
     (f/attempt-all
      [response (async-request url {:as :text} )
@@ -102,33 +102,40 @@
     :tx-bytes (format "%.2fMB" (-> (/ tx-bytes 1024) (/ 1024) (float))) }))
 
 (defn stats
-  [id ] 
-  (let [url (format "http://%s/containers/%s/stats" docker-tcp-address id)]
-    (let [rdr (io/reader url)] 
-      (readLine rdr (fn [data]
-                      (let [edn (json/parse-string data true)]
-                       (swap! docker-stats assoc (keyword (str "id" id)) 
-                               {:id id 
-                                :memory (with-memory-stats id edn)
-                                :network (with-network-stats id edn)
-                                :block-io (with-block-io-stats id edn)
-                                :cpu (with-cpu-stats id edn)} )))))))
+  [container] 
+  (let [id (apply str (rest (first (:Names container))))
+        url (format "http://%s/containers/%s/stats" docker-tcp-address id)]
+      (let [rdr (io/reader url)] 
+        ;停止中のコンテナはここでブロックされるので情報更新不可
+        (readLine rdr (fn [data]
+                        (let [edn (json/parse-string data true)]
+                          (swap! docker-stats assoc (keyword (str "id" id)) 
+                                 {:id id 
+                                  :memory (with-memory-stats id edn)
+                                  :network (with-network-stats id edn)
+                                  :block-io (with-block-io-stats id edn)
+                                  :cpu (with-cpu-stats id edn)} )))))))
 
 (defn summary
   [details]
-  {:memory {:percent (->> (map #(Float/parseFloat (string/replace (:percent (:memory %)) #"%" "")) details) 
-                          (reduce +) (format "%.2f%%") ) 
-            :usage (->> (map #(Integer/parseInt (string/replace (:usage (:memory %)) #"MB" "")) details) 
-                        (reduce +) (format "%dMB") ) }
-   :cpu {:percent (->> (map #(Float/parseFloat (string/replace (:percent (:cpu %)) #"%" "")) details) 
-                       (reduce +) (format "%.2f%%") ) }
-   :network {:rx-bytes (->> (map #(Float/parseFloat (string/replace (:rx-bytes (:network %)) #"MB" "")) details) 
-                            (reduce +) (format "%.2fMB") ) 
-             :tx-bytes (->> (map #(Float/parseFloat (string/replace (:tx-bytes (:network %)) #"MB" "")) details) 
-                            (reduce +) (format "%.2fMB") ) }
-   :block-io {:read-io (->> (map #(Integer/parseInt (string/replace (:read-io (:block-io %)) #"KB" "")) details) 
-                            (reduce +) (format "%dKB") ) 
-              :write-io (->> (map #(Integer/parseInt (string/replace (:write-io (:block-io %)) #"KB" "")) details) 
-                             (reduce +) (format "%dKB") ) }})
+  (when-not (empty? details) 
+    {:memory {:percent (->> (map #(Float/parseFloat (string/replace  (:percent (:memory %)) #"%" "")) details) 
+                            (reduce +) (format "%.2f%%") ) 
+              :usage (->> (map #(Integer/parseInt (string/replace (:usage (:memory %)) #"MB" "")) details) 
+                          (reduce +) (format "%dMB") ) }
+     :cpu {:percent (->> (map #(Float/parseFloat (string/replace (:percent (:cpu %)) #"%" "")) details) 
+                         (reduce +) (format "%.2f%%") ) }
+     :network {:rx-bytes (->> (map #(Float/parseFloat 
+                                     (string/replace (:rx-bytes (:network %)) #"MB" "")) details) 
+                              (reduce +) (format "%.2fMB") ) 
+               :tx-bytes (->> (map #(Float/parseFloat 
+                                     (string/replace  (:tx-bytes (:network %)) #"MB" "")) details) 
+                              (reduce +) (format "%.2fMB") ) }
+     :block-io {:read-io (->> (map #(Integer/parseInt 
+                                     (string/replace (:read-io (:block-io %)) #"KB" "")) details) 
+                              (reduce +) (format "%dKB") ) 
+                :write-io (->> (map #(Integer/parseInt 
+                                      (string/replace (:write-io (:block-io %)) #"KB" "")) details) 
+                               (reduce +) (format "%dKB") ) }}))
 
 
