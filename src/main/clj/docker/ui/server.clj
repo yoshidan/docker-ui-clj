@@ -57,34 +57,17 @@
 (defn -main  
   []
   (log/info "Starting stats request for docker")
-  ;docke-status
-  (let [processing (atom {})] 
-    (async/go-loop 
-     [] 
-     (async/<!  (async/timeout 3000))
-     (let [containers (docker/ps)
-           named-id #(apply str (rest (first (:Names %)))) ]
-       ;現在処理中のものは除く
-       (->> (filter #(not (contains? @processing (named-id %) )) containers)
-            (map  
-             (fn [container] 
-               (swap! processing assoc (named-id container) true)
-               ;非同期でstats取得
-               (async/go
-                []
-                (try
-                 ;TODO 非同期IOにしてスレッド占有しないようにする
-                 (docker/stats container)
-                 (catch Exception e
-                   (swap! processing dissoc (named-id container)))))))
-            (doall)) )
-     (recur)))
+  ;docker-ps/stats
+  (async/go-loop 
+   []  
+   (docker/stats-all) 
+   (async/<! (async/timeout 10000))
+   (recur))
   ;publish
   (async/go-loop
    []
    (async/<! (async/timeout 1000))
-   (ws/publish-docker-stats) 
+   (docker/publish-stats) 
    (recur))
-
   (log/info "Starting server on port 3000")
   (run-server http-handler {:port 3000}) )

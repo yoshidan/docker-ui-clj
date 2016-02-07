@@ -2,7 +2,7 @@
   (:require-macros  [cljs.core.async.macros :refer  [go]])
   (:require
    [chord.client :refer  [ws-ch]]
-   [cljs.core.async :refer  [put! chan <! >! timeout]]
+   [cljs.core.async :refer  [put! chan <! >! timeout close!]]
    [clojure.data :as data]
    [clojure.string :as string]
    [reagent.core :as reagent :refer  [atom]]
@@ -42,7 +42,7 @@
         [:th "SUM" ]
         [:td (:percent (:cpu summary)) ]
         [:td (:usage (:memory summary)) ]
-        [:td (:percent (:memory summary))]
+        [:td ]
         [:td (str (:rx-bytes (:network summary)) " / " (:tx-bytes (:network summary)) )]
         [:td (str (:read-io (:block-io summary)) " / " (:write-io (:block-io summary)) )]
         ]])]]] )
@@ -59,7 +59,9 @@
      (loop []
        (let [{:keys  [message error]}  (<! ws-channel)]
          (if error
-           (js/console.log  "Uh oh:" error)
+           (do
+            (close! ws-ch)
+            (js/console.log  "Uh oh:" error))
            (let [response message]
              ;responseがlistになっているはずだがlistにしなくてはならない
              (apply swap! docker-stats assoc :stats (list message) ) 

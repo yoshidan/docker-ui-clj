@@ -6,13 +6,22 @@
    [docker.ui.components.failure :as f]
    [environ.core :refer [env] :as environ]
    [clojure.tools.logging :as log]
+   [clojure.core.async :as async]
    [cheshire.core :as json ]))
 
-(def docker-tcp-address (environ/env :docker-tcp-address))
+(def ^:private docker-tcp-address (environ/env :docker-tcp-address))
 
 ;docker statsの結果、container-idがキー
-(def docker-stats 
-  (atom {}))
+(def ^:private docker-stats (atom {}))
+(def ^:private stats-processing (atom {}))
+
+;pubsub用のexchange
+(def ^:private exchange-chan (async/chan))
+(def ^:private exchange (async/pub exchange-chan #(:topic %)))
+
+(defn- named-id
+  [container]
+  (apply str (rest (first (:Names container)))))
 
 (defn- async-request 
   "up状態のコンテナを取得する"
@@ -36,7 +45,7 @@
       (log/error "Failed, status = %s, body = %s" status body)
       (f/fail "external system status error") ))))
 
-(defn ps
+(defn- ps
   "全コンテナ取得"
   []
   (let [url (format "http://%s/containers/json?all=1" docker-tcp-address) ]
@@ -101,9 +110,10 @@
    {:rx-bytes (format "%.2fMB" (-> (/ rx-bytes 1024) (/ 1024) (float) ))
     :tx-bytes (format "%.2fMB" (-> (/ tx-bytes 1024) (/ 1024) (float))) }))
 
-(defn stats
+(defn- stats
+  "統計の取得"
   [container] 
-  (let [id (apply str (rest (first (:Names container))))
+  (let [id (named-id container) 
         url (format "http://%s/containers/%s/stats" docker-tcp-address id)
         #^java.net.URLConnection con (->> (java.net.URL. url) (.openConnection)  )]
     (.setReadTimeout con 3000) 
@@ -134,12 +144,11 @@
   (Thread/sleep 3000)
   (recur container) )
 
-(defn summary
+(defn- summary
+  "合計の取得"
   [details]
   (when-not (empty? details) 
-    {:memory {:percent (->> (map #(Float/parseFloat (string/replace  (:percent (:memory %)) #"%" "")) details) 
-                            (reduce +) (format "%.2f%%") ) 
-              :usage (->> (map #(Integer/parseInt (string/replace (:usage (:memory %)) #"MB" "")) details) 
+    {:memory {:usage (->> (map #(Integer/parseInt (string/replace (:usage (:memory %)) #"MB" "")) details) 
                           (reduce +) (format "%dMB") ) }
      :cpu {:percent (->> (map #(Float/parseFloat (string/replace (:percent (:cpu %)) #"%" "")) details) 
                          (reduce +) (format "%.2f%%") ) }
@@ -156,4 +165,40 @@
                                       (string/replace (:write-io (:block-io %)) #"KB" "")) details) 
                                (reduce +) (format "%dKB") ) }}))
 
+(defn stats-all 
+  "利用可能な全コンテナのdocker-statsを実行する"
+  []
+  (->> 
+   (ps)
+   (filter #(not (contains? @stats-processing (named-id %) ))) ;処理中以外
+   (map  
+    (fn [container] 
+      (swap! stats-processing assoc (named-id container) true)
+      ;非同期でstats取得
+      (async/go
+       []
+       (try
+        ;TODO 非同期IOにしてスレッド占有しないようにする
+        (stats container)
+        (catch Exception e
+          (swap! stats-processing dissoc (named-id container)))))))
+   (doall)))
 
+(defn publish-stats
+  "statsの結果をpublishする"
+  []
+  (as-> 
+    (sort-by :down (vals @docker-stats)) response
+    {:summary (summary response) :detail response}
+    (async/go (async/>! exchange-chan {:topic :docker-stats :data response}))))
+
+(defn subscribe-stats
+  "statsの結果をsubscribeする"
+  [subscriber]
+  (async/sub exchange :docker-stats subscriber))
+
+
+(defn unsubscribe-stats
+  "statsの結果をunsubscribeする"
+  [subscriber]
+  (async/unsub exchange :docker-stats subscriber))
