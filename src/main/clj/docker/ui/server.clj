@@ -53,12 +53,29 @@
     (apply routes handlers))
 
 
+
 (defn -main  
   []
   (log/info "Starting stats request for docker")
-  (async/go
-   (->> (docker/ps)
-        (pmap #(docker/stats %))
-        (doall)))
+  (let [processing (atom {})] 
+    (async/go-loop 
+     [] 
+     (async/<!  (async/timeout 3000))
+     (let [containers (docker/ps)
+           named-id #(apply str (rest (first (:Names %)))) ]
+       ;現在処理中のものは除く
+       (->> (filter #(not (contains? @processing (named-id %) )) containers)
+            (map  
+             (fn [container] 
+               (swap! processing assoc (named-id container) true)
+               ;非同期でstats取得
+               (async/go
+                []
+                (try
+                 (docker/stats container)
+                 (catch Exception e
+                   (swap! processing dissoc (named-id container)))))))
+            (doall)) )
+     (recur)))
   (log/info "Starting server on port 3000")
   (run-server http-handler {:port 3000}) )

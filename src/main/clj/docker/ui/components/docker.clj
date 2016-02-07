@@ -118,14 +118,19 @@
                                :network (with-network-stats id edn)
                                :block-io (with-block-io-stats id edn)
                                :cpu (with-cpu-stats id edn)} ))))
-         (catch Exception e
+         ;timeout (コンテナstop 以外は終了)
+         (catch java.net.SocketTimeoutException e
            (swap! docker-stats assoc (keyword (str "id" id)) 
                   {:id id 
                    :down true
                    :memory {:percent "0%" :usage "0MB" :limit "0GB"}
                    :network {:rx-bytes "0MB" :tx-bytes "0MB"} 
                    :block-io {:read-io "0KB" :write-io "0KB"} 
-                   :cpu {:percent "0%"}} ))))
+                   :cpu {:percent "0%"}} ))
+         (catch Exception e
+           (swap! docker-stats dissoc (keyword (str "id" id)))
+           (throw e))))
+  (Thread/sleep 3000)
   (recur container) )
 
 (defn summary
