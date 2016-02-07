@@ -72,6 +72,7 @@
                (async/go
                 []
                 (try
+                 ;TODO 非同期IOにしてスレッド占有しないようにする
                  (docker/stats container)
                  (catch Exception e
                    (swap! processing dissoc (named-id container)))))))

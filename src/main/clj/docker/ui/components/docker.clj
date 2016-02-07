@@ -111,6 +111,7 @@
     (try (readLine (io/reader (.getInputStream con )) 
                    (fn [data]
                      (let [edn (json/parse-string data true)]
+                       ;TODO stats更新じゃなくてcore/asyncのpubsubにしてchanelにブロードキャストする
                        (swap! docker-stats assoc (keyword (str "id" id)) 
                               {:id id 
                                :down false

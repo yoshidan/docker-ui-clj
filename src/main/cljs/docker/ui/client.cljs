@@ -57,17 +57,12 @@
   (go 
    (let  [{:keys  [ws-channel]}  (<! (ws-ch  "ws://localhost:3000/ws/docker/stats" (:format :edn) ))]
      (loop []
-       ;送信
-       (let [send-ok  (>! ws-channel  "PLEASE-SEND-DOCKER-STATS")]
-         (if-not send-ok
-           (js/console.log  "Can't send in /docker/stats loop")
-           (let [{:keys  [message error]}  (<! ws-channel)]
-             (if error
-               (js/console.log  "Uh oh:" error)
-               (let [response message]
-                ;responseがlistになっているはずだがlistにしなくてはならない
-                (apply swap! docker-stats assoc :stats (list message) ) 
-                (<! (timeout 1000))
-                (recur )))))))))
+       (let [{:keys  [message error]}  (<! ws-channel)]
+         (if error
+           (js/console.log  "Uh oh:" error)
+           (let [response message]
+             ;responseがlistになっているはずだがlistにしなくてはならない
+             (apply swap! docker-stats assoc :stats (list message) ) 
+             (recur )))))))
   (reagent/render-component [main-app] (.getElementById js/document "app") ))
  
