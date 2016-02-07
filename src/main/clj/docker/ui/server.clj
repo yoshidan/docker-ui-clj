@@ -57,6 +57,7 @@
 (defn -main  
   []
   (log/info "Starting stats request for docker")
+  ;docke-status
   (let [processing (atom {})] 
     (async/go-loop 
      [] 
@@ -78,5 +79,12 @@
                    (swap! processing dissoc (named-id container)))))))
             (doall)) )
      (recur)))
+  ;publish
+  (async/go-loop
+   []
+   (async/<! (async/timeout 1000))
+   (ws/publish-docker-stats) 
+   (recur))
+
   (log/info "Starting server on port 3000")
   (run-server http-handler {:port 3000}) )
