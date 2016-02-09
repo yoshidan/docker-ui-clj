@@ -6,6 +6,8 @@
                  [reagent "0.6.0-alpha"]
                  [com.cognitect/transit-cljs "0.8.237"]
                  [garden "1.3.0"]
+                 [cljs-ajax "0.5.3"]
+                 [secretary "1.2.3"]
                  ;server
                  [compojure "1.3.4"]
                  [ring  "1.4.0"]

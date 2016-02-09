@@ -121,9 +121,9 @@
     (try (readLine (io/reader (.getInputStream con )) 
                    (fn [data]
                      (let [edn (json/parse-string data true)]
-                       ;TODO stats更新じゃなくてcore/asyncのpubsubにしてchanelにブロードキャストする
                        (swap! docker-stats assoc (keyword (str "id" id)) 
-                              {:id id 
+                              {:name id 
+                               :id (:Id container)
                                :down false
                                :memory (with-memory-stats id edn)
                                :network (with-network-stats id edn)
@@ -132,7 +132,7 @@
          ;timeout (コンテナstop 以外は終了)
          (catch java.net.SocketTimeoutException e
            (swap! docker-stats assoc (keyword (str "id" id)) 
-                  {:id id 
+                  {:name id 
                    :down true
                    :memory {:percent "0%" :usage "0MB" :limit "0GB"}
                    :network {:rx-bytes "0MB" :tx-bytes "0MB"} 
@@ -202,3 +202,15 @@
   "statsの結果をunsubscribeする"
   [subscriber]
   (async/unsub exchange :docker-stats subscriber))
+
+
+(defn container
+  "コンテナの情報取得"
+  [id]
+  (let [url (format "http://%s/containers/%s/json" docker-tcp-address id) ]
+    (log/infof url)
+    (f/attempt-all
+     [response (async-request url {:as :text} )
+      body (handle-response response)] 
+     ;ednだとcljs側で数字始まりがparse-errorになるため
+     (json/parse-string body))))

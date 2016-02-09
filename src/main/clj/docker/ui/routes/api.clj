@@ -35,4 +35,5 @@
 
 (defroutes routes 
   (context "/api" []
+           (GET "/containers/:id" [id] (api-response (docker/container id)))
            (GET "/health"  [] (api-response  {:status "UP"}))))
