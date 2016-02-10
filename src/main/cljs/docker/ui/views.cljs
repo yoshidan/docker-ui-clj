@@ -4,13 +4,33 @@
    [accountant.core :as accountant]))
 
 (defn default-view 
+  "URL直接指定などされた時のdisatch-currentでajax通信中でcurrent-pageがnilになるのを防止する"
   []
   [:div [:span ""]])
 
 (defn current-view
   "現在のview current-pageが更新される毎に再レンダリング"
   []
+  (println "render ")
   ((session/get :current-page default-view)))
+
+(defn start-view
+  "コンテナ起動用のview"
+  []
+  [:div 
+   [:h1 "Dokcer Info"]
+   [:span "コンテナを起動します。"]
+   [:br]
+   [:button.btn.btn-primary "OK"]])
+
+(defn stop-view
+  "コンテナ起動用のview"
+  []
+  [:div 
+   [:h1 "Dokcer Info"]
+   [:span "コンテナを停止します。"]
+   [:br]
+   [:button.btn.btn-danger "OK"]])
 
 (defn stats-view []
   [:div 
@@ -74,12 +94,12 @@
                [:div 
                 [:span.with-link running ]
                 (case running
-                  "running" [:a.stop {:href "#" 
-                                 :on-click #(accountant/navigate! (str "/containers/" (get edn "Id") "/stop")) } 
-                             [:span {:title "Stop Container" :class "glyphicon glyphicon-stop"}]]
-                  "exited" [:a {:href "#"
-                                :on-click #(accountant/navigate! (str "/containers/" (get edn "Id") "/start")) } 
-                            [:span {:title "Start Container" :class "glyphicon glyphicon-play"}]])]) ]]
+                  "running" [:button.btn.btn-danger.btn-sm 
+                             {:on-click #(accountant/navigate! (str "/containers/" (get edn "Id") "/stop")) }
+                            "stop" ]
+                  "exited" [:button.btn.btn-primary.btn-sm 
+                            {:on-click #(accountant/navigate! (str "/containers/" (get edn "Id") "/start")) } 
+                            "start"])]) ]]
            [:tr [:th "再起動中？"] [:td (if-let [restarting (get status "Restarting")] restarting "false")]]
            [:tr [:th "開始時刻"] [:td (get status "StartedAt")]]
            [:tr [:th "終了時刻"] [:td (get status "FinishedAt")]]))

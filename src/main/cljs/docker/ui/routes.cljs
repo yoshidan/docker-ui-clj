@@ -15,4 +15,12 @@
 (secretary/defroute "/stats" {} 
   (session/put! :current-page view/stats-view ))
 
+(secretary/defroute "/containers/:id/start" {} 
+  (session/put! :current-page view/start-view ))
+
+(secretary/defroute "/containers/:id/stop" {} 
+  (session/put! :current-page view/stop-view ))
+
+
+
 

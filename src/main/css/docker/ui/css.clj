@@ -7,9 +7,7 @@
 ;lein-gardenするとdefstylesheeだと何も出力されない
 (defstyles screen
   (list  
-   [:span.with-link {:vertical-align "super"} ]
-   [(s/+ :span.with-link :a ) {:font-size (px 20)} ]
-   [(s/+ :span.with-link :a.stop ) {:color "#D8162E"} ]
+   [(s/+ :span.with-link :button ) {:margin-left (px 5)} ]
    [:.table-hover.grid
     [:tbody 
      [:tr 
