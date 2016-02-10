@@ -3,20 +3,17 @@
   (:require
    [clojure.string :as string]
    [reagent.core :as reagent ]
+   [reagent.session :as session ]
    [clojure.browser.repl :as repl]
-   [docker.ui.utils :as u]
+   [accountant.core :as accountant]
    [cljs.reader :as reader]))
 
 (enable-console-print!)
 
-(def current-view  (reagent/atom nil))
-
-(defn set-current-view!  
-  "現在のviewを変更する"
-  [function]
-  (reset! current-view function))
-
-(def docker-stats  (reagent/atom {:stats {}}))
+(defn current-view
+  "現在のview current-pageが更新される毎に再レンダリング"
+  []
+  ((session/get :current-page)))
 
 (defn stats-view []
   [:div 
@@ -32,15 +29,15 @@
        [:th "NET I/O"]
        [:th "BLOCK I/O"]]]
      [:tbody 
-      (for [container (:detail (:stats @docker-stats)) ]
-        [:tr {:key (:id container) :on-click #(u/dispatch (str "/containers/" (:id container))) } 
+      (for [container (:detail (session/get :stats )) ]
+        [:tr {:key (:id container) :on-click #(accountant/navigate! (str "/containers/" (:id container))) } 
          [:td (:name container) ]
          [:td (str (:percent (:cpu container)))]
          [:td (str (:usage (:memory container)) " / " (:limit (:memory container)))]
          [:td (str (:percent (:memory container)))]
          [:td (str (:rx-bytes (:network container)) " / " (:tx-bytes (:network container)) )]
          [:td (str (:read-io (:block-io container)) " / " (:write-io (:block-io container)) )]])]
-     (let [summary (:summary (:stats @docker-stats))] 
+     (let [summary (:summary (session/get :stats))] 
        [:tfoot
         [:tr 
          [:th "SUM" ]

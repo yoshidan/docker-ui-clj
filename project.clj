@@ -7,7 +7,9 @@
                  [com.cognitect/transit-cljs "0.8.237"]
                  [garden "1.3.0"]
                  [cljs-ajax "0.5.3"]
+                 [venantius/accountant  "0.1.6"]
                  [secretary "1.2.3"]
+                 [reagent-utils "0.1.7"]
                  ;server
                  [compojure "1.3.4"]
                  [ring  "1.4.0"]

@@ -7,6 +7,8 @@
    [cljs.core.async :refer  [put! chan <! >! timeout close!]]
    [docker.ui.views :as view]
    [clojure.data :as data]
+   [accountant.core :as accountant]
+   [reagent.session :as session]
    [clojure.string :as string]
    [reagent.core :as reagent :refer  [atom]]
    [clojure.browser.repl :as repl]
@@ -14,12 +16,7 @@
 
 (enable-console-print!)
 
-(view/set-current-view! view/stats-view)
 
-(defn- main-app
-  "ルート"
-  []
-  (@view/current-view))
 
 (defn ^:export run
   []
@@ -33,8 +30,11 @@
             (js/console.log  "Uh oh:" error))
            (let [response message]
              ;responseがlistになっているはずだがlistにしなくてはならない
-             (apply swap! view/docker-stats assoc :stats (list message) ) 
+             (session/put! :stats message)
              (recur )))))))
-  (reagent/render-component [main-app] (.getElementById js/document "app") ))
+
+  (accountant/configure-navigation!)
+  (accountant/dispatch-current!)
+  (reagent/render-component [view/current-view] (.getElementById js/document "app") ))
 
 
