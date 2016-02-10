@@ -68,7 +68,18 @@
         (let [status (-> (get edn "State") 
                          (select-keys ["Status" "Restarting" "StartedAt" "FinishedAt"]))]
           (list
-           [:tr [:th {:row-span 4} "ステータス" ] [:th {:width "10%"} "起動状態"] [:td (get status "Status")]]
+           [:tr [:th {:row-span 4} "ステータス" ] [:th {:width "10%"} "起動状態"] 
+            [:td 
+             (let [running  (get status "Status")] 
+               [:div 
+                [:span.with-link running ]
+                (case running
+                  "running" [:a.stop {:href "#" 
+                                 :on-click #(accountant/navigate! (str "/containers/" (get edn "Id") "/stop")) } 
+                             [:span {:title "Stop Container" :class "glyphicon glyphicon-stop"}]]
+                  "exited" [:a {:href "#"
+                                :on-click #(accountant/navigate! (str "/containers/" (get edn "Id") "/start")) } 
+                            [:span {:title "Start Container" :class "glyphicon glyphicon-play"}]])]) ]]
            [:tr [:th "再起動中？"] [:td (if-let [restarting (get status "Restarting")] restarting "false")]]
            [:tr [:th "開始時刻"] [:td (get status "StartedAt")]]
            [:tr [:th "終了時刻"] [:td (get status "FinishedAt")]]))
