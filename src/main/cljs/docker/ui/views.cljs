@@ -51,7 +51,7 @@
          [:td (str (:read-io (:block-io summary)) " / " (:write-io (:block-io summary)) )]
          ]])]]] )
 
-(defn container-view
+(defn info-view
   "コンテナの情報"
   [container]
   ;serverからのレスポンスがシンボルなしのedn形式の文字列であるためparse

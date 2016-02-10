@@ -22,7 +22,7 @@
                  [environ "1.0.0"]
                  [cheshire "5.5.0"]
                  [org.clojure/tools.logging "0.3.1"]
-                 [org.clojure/clojure "1.7.0"]
+                 [org.clojure/clojure "1.8.0"]
                  [org.clojure/algo.monads "0.1.5"]
                  [clj-time "0.9.0"]
                  [prone "0.6.1"]
