@@ -33,8 +33,8 @@
        [:th "BLOCK I/O"]]]
      [:tbody 
       (for [container (:detail (:stats @docker-stats)) ]
-        [:tr {:key (:id container)} 
-         [:td {:on-click #(u/dispatch (str "/containers/" (:id container)))} (:name container) ]
+        [:tr {:key (:id container) :on-click #(u/dispatch (str "/containers/" (:id container))) } 
+         [:td (:name container) ]
          [:td (str (:percent (:cpu container)))]
          [:td (str (:usage (:memory container)) " / " (:limit (:memory container)))]
          [:td (str (:percent (:memory container)))]
@@ -54,14 +54,25 @@
 (defn container-view
   "コンテナの情報"
   [container]
-  [:div 
-   [:h1 "Docker Info"]
-   [:span container]
-   [:span (cljs.reader/read-string container)]
-   [:div 
-    [:table.table.table-hover
-     [:tbody
-      [:tr [:th "HostPath"] [:td (get (cljs.reader/read-string container) "HostsPath") ]]
-      [:tr [:th "Links"] [:td (:Links (:HostConfig container))]]]]]])
+  ;serverからのレスポンスがシンボルなしのedn形式の文字列であるためparse
+  (let [edn (cljs.reader/read-string container)] 
+    [:div 
+     [:h1 "Docker Info"]
+     [:div 
+      [:table.table.table-hover
+       [:thead
+        [:tr [:th {:width "20%"} "キー" ] [:th "値"]]]
+       [:tbody
+        [:tr [:th "ID"] [:td (get edn "Id") ]]
+        [:tr [:th "コンテナ名"] [:td (get edn "Name") ]]
+        [:tr [:th "イメージ"] [:td (get edn "Image") ]]
+        [:tr [:th "ポート"] [:td (-> (get edn "HostConfig") (get "PortBindings") (str)) ]]
+        [:tr [:th "IPアドレス"] [:td (-> (get edn "NetworkSettings") (get "IPAddress") (str)) ]]
+        [:tr [:th "Gateway"] [:td (-> (get edn "NetworkSettings") (get "Gateway") (str)) ]]
+        [:tr [:th "マウント"] [:td (-> (get edn "Volumes") (str)) ]]
+        [:tr [:th "リンク"] [:td (-> (get edn "HostConfig") (get "Links") (str)) ]]
+        [:tr [:th "ステータス"] [:td (-> (get edn "State") 
+                                         (select-keys ["Status" "Restarting" "StartedAt" "FinishedAt"]) (str)) ]]
+        [:tr [:th "作成日"] [:td (get edn "Created")]]]]]]))
 
 

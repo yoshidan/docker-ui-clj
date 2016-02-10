@@ -121,6 +121,7 @@
     (try (readLine (io/reader (.getInputStream con )) 
                    (fn [data]
                      (let [edn (json/parse-string data true)]
+                       ;数字先頭のkeywordにした場合parseできずエラーになるためid文字列を先頭につける
                        (swap! docker-stats assoc (keyword (str "id" id)) 
                               {:name id 
                                :id (:Id container)
@@ -133,6 +134,7 @@
          (catch java.net.SocketTimeoutException e
            (swap! docker-stats assoc (keyword (str "id" id)) 
                   {:name id 
+                   :id (:Id container)
                    :down true
                    :memory {:percent "0%" :usage "0MB" :limit "0GB"}
                    :network {:rx-bytes "0MB" :tx-bytes "0MB"} 
