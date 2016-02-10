@@ -5,7 +5,9 @@
 ;lein-gardenするとdefstylesheeだと何も出力されない
 (defstyles screen
   (list 
-   [:.test {:font-size (px 500)}] 
-   ))
+   [:.table-hover.grid
+    [:tbody 
+     [:tr 
+      [:th {:background-color "rgba(238, 238, 238, 0.63)"}]]]]))
 
 

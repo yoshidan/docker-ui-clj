@@ -1,5 +1,8 @@
 (ns docker.ui.routes.site
+  (:use 
+   [hiccup.core])
   (:require  
+   [hiccup.page :as hiccup]
    [compojure.core :refer  [GET defroutes]]
    [compojure.route :refer  [resources not-found]]
    [ring.util.response :refer  (response redirect)]))
@@ -31,6 +34,20 @@
        (view-error-response result#)
        result#)))
 
+(defn- single-page-view
+  []
+  (hiccup/html5  
+   [:head
+    [:title "Dokcer UI"]
+    [:link {:rel "stylesheet" :href "/assets/css/out/screen.css"}]
+    [:link {:rel "stylesheet" :href "https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css"}]]
+   [:body 
+    [:div {:id "app" :class "container"} 
+     [:script {:src "/assets/js/app.js"}]
+     [:script "docker.ui.app.run();"]]]))
+
 (defroutes routes
   (resources  "/")
+  (GET "/containers/:id" [] (single-page-view))
+  (GET "/stats" [] (single-page-view))
   (not-found "Not found"))

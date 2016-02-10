@@ -1,19 +1,16 @@
 (ns docker.ui.views
-  (:require-macros  [cljs.core.async.macros :refer  [go]])
   (:require
-   [clojure.string :as string]
-   [reagent.core :as reagent ]
    [reagent.session :as session ]
-   [clojure.browser.repl :as repl]
-   [accountant.core :as accountant]
-   [cljs.reader :as reader]))
+   [accountant.core :as accountant]))
 
-(enable-console-print!)
+(defn default-view 
+  []
+  [:div [:span ""]])
 
 (defn current-view
   "現在のview current-pageが更新される毎に再レンダリング"
   []
-  ((session/get :current-page)))
+  ((session/get :current-page default-view)))
 
 (defn stats-view []
   [:div 
@@ -56,20 +53,25 @@
     [:div 
      [:h1 "Docker Info"]
      [:div 
-      [:table.table.table-hover
+      [:table.table.table-hover.grid
        [:thead
-        [:tr [:th {:width "20%"} "キー" ] [:th "値"]]]
+        [:tr [:th {:width "20%"} "キー" ] [:th {:col-span 2} "値"]]]
        [:tbody
-        [:tr [:th "ID"] [:td (get edn "Id") ]]
-        [:tr [:th "コンテナ名"] [:td (get edn "Name") ]]
-        [:tr [:th "イメージ"] [:td (get edn "Image") ]]
-        [:tr [:th "ポート"] [:td (-> (get edn "HostConfig") (get "PortBindings") (str)) ]]
-        [:tr [:th "IPアドレス"] [:td (-> (get edn "NetworkSettings") (get "IPAddress") (str)) ]]
-        [:tr [:th "Gateway"] [:td (-> (get edn "NetworkSettings") (get "Gateway") (str)) ]]
-        [:tr [:th "マウント"] [:td (-> (get edn "Volumes") (str)) ]]
-        [:tr [:th "リンク"] [:td (-> (get edn "HostConfig") (get "Links") (str)) ]]
-        [:tr [:th "ステータス"] [:td (-> (get edn "State") 
-                                         (select-keys ["Status" "Restarting" "StartedAt" "FinishedAt"]) (str)) ]]
-        [:tr [:th "作成日"] [:td (get edn "Created")]]]]]]))
+        [:tr [:th "ID"] [:td {:col-span 2} (get edn "Id") ]]
+        [:tr [:th "コンテナ名"] [:td {:col-span 2} (get edn "Name") ]]
+        [:tr [:th "イメージ"] [:td {:col-span 2}(get edn "Image") ]]
+        [:tr [:th "ポート"] [:td {:col-span 2}(-> (get edn "HostConfig") (get "PortBindings") (str)) ]]
+        [:tr [:th "IPアドレス"] [:td {:col-span 2}(-> (get edn "NetworkSettings") (get "IPAddress") (str)) ]]
+        [:tr [:th "Gateway"] [:td {:col-span 2}(-> (get edn "NetworkSettings") (get "Gateway") (str)) ]]
+        [:tr [:th "マウント"] [:td {:col-span 2}(-> (get edn "Volumes") (str)) ]]
+        [:tr [:th "リンク"] [:td {:col-span 2}(-> (get edn "HostConfig") (get "Links") (str)) ]]
+        (let [status (-> (get edn "State") 
+                         (select-keys ["Status" "Restarting" "StartedAt" "FinishedAt"]))]
+          (list
+           [:tr [:th {:row-span 4} "ステータス" ] [:th {:width "10%"} "起動状態"] [:td (get status "Status")]]
+           [:tr [:th "再起動中？"] [:td (if-let [restarting (get status "Restarting")] restarting "false")]]
+           [:tr [:th "開始時刻"] [:td (get status "StartedAt")]]
+           [:tr [:th "終了時刻"] [:td (get status "FinishedAt")]]))
+        [:tr [:th "作成時刻"] [:td {:col-span 2}(get edn "Created")]]]]]]))
 
 

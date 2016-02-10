@@ -16,6 +16,7 @@
                  [ring/ring-defaults  "0.1.5"]
                  [ring/ring-codec  "1.0.0"]
                  [http-kit "2.1.18"]
+                 [hiccup  "1.0.5"]
                  ;redis
                  [com.taoensso/carmine  "2.10.0"] 
                  ;core
