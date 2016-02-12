@@ -1,6 +1,7 @@
 (ns docker.ui.views
   (:require
    [reagent.session :as session ]
+   [ajax.core :as ajax]
    [accountant.core :as accountant]))
 
 (defn default-view 
@@ -16,21 +17,53 @@
 
 (defn start-view
   "コンテナ起動用のview"
-  []
+  [id]
   [:div 
    [:h1 "Dokcer Info"]
    [:span "コンテナを起動します。"]
    [:br]
-   [:button.btn.btn-primary "OK"]])
+   [:button.btn.btn-primary 
+    {:on-click #(ajax/POST (str "/api/containers/" id "/start") 
+                         {:handler (fn [e] (accountant/navigate! (str "/containers/" id "/start/complete")))
+                          :error-handler (fn [e] (accountant/navigate! (str "/containers/" id "/start/failure")))})}
+    "OK" ]])
+
+(defn start-failure-view
+  [id]
+  [:div 
+   [:h1 "Dokcer Info"]
+   [:div.alert.alert-danger {:role ""} (str id "の起動に失敗しました")]])
+
+(defn start-complete-view
+  [id]
+  [:div 
+   [:h1 "Dokcer Info"]
+   [:div.alert.alert-success {:role "alert"} (str id "の起動に成功しました")]])
 
 (defn stop-view
   "コンテナ起動用のview"
-  []
+  [id]
   [:div 
    [:h1 "Dokcer Info"]
    [:span "コンテナを停止します。"]
    [:br]
-   [:button.btn.btn-danger "OK"]])
+   [:button.btn.btn-danger
+    {:on-click #(ajax/POST (str "/api/containers/" id "/stop") 
+                         {:handler (fn [e] (accountant/navigate! (str "/containers/" id "/stop/complete")))
+                          :error-handler (fn [e] (accountant/navigate! (str "/containers/" id "/stop/failure")))})}
+    "OK"]])
+
+(defn stop-failure-view
+  [id]
+  [:div 
+   [:h1 "Dokcer Info"]
+   [:div.alert.alert-danger {:role "alert"} (str id "の停止に失敗しました")]])
+
+(defn stop-complete-view
+  [id]
+  [:div 
+   [:h1 "Dokcer Info"]
+   [:div.alert.alert-success {:role "alert"} (str id "の停止に成功しました")]])
 
 (defn stats-view []
   [:div 

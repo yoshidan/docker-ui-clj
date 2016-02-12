@@ -15,12 +15,23 @@
 (secretary/defroute "/stats" {} 
   (session/put! :current-page view/stats-view ))
 
-(secretary/defroute "/containers/:id/start" {} 
-  (session/put! :current-page view/start-view ))
+(secretary/defroute "/containers/:id/start" {:keys [id]} 
+  (session/put! :current-page #(view/start-view id )))
 
-(secretary/defroute "/containers/:id/stop" {} 
-  (session/put! :current-page view/stop-view ))
+(secretary/defroute "/containers/:id/start/complete" {:keys [id]} 
+  (session/put! :current-page #(view/start-complete-view id)))
 
+(secretary/defroute "/containers/:id/start/failure" {:keys [id]} 
+  (session/put! :current-page #(view/start-failure-view id)))
+
+(secretary/defroute "/containers/:id/stop" {:keys [id]} 
+  (session/put! :current-page #(view/stop-view id)))
+
+(secretary/defroute "/containers/:id/stop/complete" {:keys [id]} 
+  (session/put! :current-page #(view/stop-complete-view id)))
+
+(secretary/defroute "/containers/:id/stop/failure" {:keys [id]} 
+  (session/put! :current-page #(view/stop-failure-view id)))
 
 
 
