@@ -16,23 +16,21 @@
   ((session/get :current-page default-view)))
 
 (defn start-view
-  "コンテナ起動用のview"
   [id]
   [:div 
    [:h1 "Dokcer Info"]
-   [:span "コンテナを起動します。"]
-   [:br]
-   [:button.btn.btn-primary 
-    {:on-click #(ajax/POST (str "/api/containers/" id "/start") 
-                         {:handler (fn [e] (accountant/navigate! (str "/containers/" id "/start/complete")))
-                          :error-handler (fn [e] (accountant/navigate! (str "/containers/" id "/start/failure")))})}
-    "OK" ]])
+   [:div.alert.alert-info {:role "alert"} "コンテナを起動しますか？"
+    [:button.btn.btn-primary
+     {:on-click #(ajax/POST (str "/api/containers/" id "/start") 
+                            {:handler (fn [e] (accountant/navigate! (str "/containers/" id "/start/complete")))
+                             :error-handler (fn [e] (accountant/navigate! (str "/containers/" id "/start/failure")))})}
+     "OK" ]]])
 
 (defn start-failure-view
   [id]
   [:div 
    [:h1 "Dokcer Info"]
-   [:div.alert.alert-danger {:role ""} (str id "の起動に失敗しました")]])
+   [:div.alert.alert-danger {:role "alert"} (str id "の起動に失敗しました")]])
 
 (defn start-complete-view
   [id]
@@ -41,17 +39,15 @@
    [:div.alert.alert-success {:role "alert"} (str id "の起動に成功しました")]])
 
 (defn stop-view
-  "コンテナ起動用のview"
   [id]
   [:div 
    [:h1 "Dokcer Info"]
-   [:span "コンテナを停止します。"]
-   [:br]
-   [:button.btn.btn-danger
-    {:on-click #(ajax/POST (str "/api/containers/" id "/stop") 
-                         {:handler (fn [e] (accountant/navigate! (str "/containers/" id "/stop/complete")))
-                          :error-handler (fn [e] (accountant/navigate! (str "/containers/" id "/stop/failure")))})}
-    "OK"]])
+   [:div.alert.alert-info {:role "alert"} "コンテナを停止しますか？"
+    [:button.btn.btn-primary
+     {:on-click #(ajax/POST (str "/api/containers/" id "/stop") 
+                            {:handler (fn [e] (accountant/navigate! (str "/containers/" id "/stop/complete")))
+                             :error-handler (fn [e] (accountant/navigate! (str "/containers/" id "/stop/failure")))})}
+     "OK"]]])
 
 (defn stop-failure-view
   [id]
