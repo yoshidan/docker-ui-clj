@@ -34,7 +34,7 @@
        (view-error-response result#)
        result#)))
 
-(defn- single-page-view
+(defn- single-page
   []
   (hiccup/html5  
    [:head
@@ -48,6 +48,12 @@
 
 (defroutes routes
   (resources  "/")
-  (GET "/containers/:id" [] (single-page-view))
+  (GET "/containers/:id" [] (single-page))
+  (GET "/containers/:id/start" [] (single-page))
+  (GET "/containers/:id/start/complete" [] (single-page))
+  (GET "/containers/:id/start/failure" [] (single-page))
+  (GET "/containers/:id/stop" [] (single-page-view))
+  (GET "/containers/:id/stop/complete" [] (single-page))
+  (GET "/containers/:id/stop/failure" [] (single-page))
   (GET "/stats" [] (single-page-view))
   (not-found "Not found"))

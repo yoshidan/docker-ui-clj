@@ -23,14 +23,16 @@
   [container]
   (apply str (rest (first (:Names container)))))
 
-(defn- async-request 
-  "up状態のコンテナを取得する"
+(defn- async-get 
   [url opt ]
   (log/infof url)
   (http/get url (merge opt {:timeout 2000})) )
 
-(defn- handle-response
-  "レスポンスをハンドリングする"
+(defn- async-post
+  [url]
+  (http/post url {:timeout 2000}))
+
+(defn- handle-get
   [response]
   (let [{:keys [status error body]} @response]
     (log/info status)
@@ -43,16 +45,32 @@
      :else  
      (do
       (log/error "Failed, status = %s, body = %s" status body)
-      (f/fail "external system status error") ))))
+      (f/fail (format "external system status error [%s]" status)) ))))
+
+(defn- handle-post
+  [response]
+  (let [{:keys [status error body]} @response]
+    (log/info status)
+    (cond
+     (some? error)  
+     (do
+      (log/error "Failed  exception = %s" error)
+      (f/fail "external system connection errorr"))
+     (== 204 status) (log/info "success")
+     :else  
+     (do
+      (log/error "Failed, status = %s, body = %s" status body)
+      (f/fail (format "external system status error [%s] [%s]" status body)) ))))
+
+
 
 (defn- ps
   "全コンテナ取得"
   []
   (let [url (format "http://%s/containers/json?all=1" docker-tcp-address) ]
-    (log/infof url)
     (f/attempt-all
-     [response (async-request url {:as :text} )
-      body (handle-response response)] 
+     [response (async-get url {:as :text} )
+      body (handle-get response)] 
      (json/parse-string body true))))
  
 (defn- readLine 
@@ -212,7 +230,25 @@
   (let [url (format "http://%s/containers/%s/json" docker-tcp-address id) ]
     (log/infof url)
     (f/attempt-all
-     [response (async-request url {:as :text} )
-      body (handle-response response)] 
+     [response (async-get url {:as :text} )
+      body (handle-get response)] 
      ;ednだとcljs側で数字始まりがparse-errorになるため
      (json/parse-string body))))
+
+(defn start
+  "コンテナ起動"
+  [id]
+  (let [url (format "http://%s/containers/%s/start" docker-tcp-address id) ]
+    (log/infof url)
+    (f/attempt-all
+     [response (async-post url)]
+     (handle-post response))))
+
+(defn stop
+  "コンテナ停止"
+  [id]
+  (let [url (format "http://%s/containers/%s/stop" docker-tcp-address id) ]
+    (log/infof url)
+    (f/attempt-all
+     [response (async-post url)]
+     (handle-post response))))

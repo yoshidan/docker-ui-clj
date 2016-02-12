@@ -12,8 +12,9 @@
 (defn current-view
   "現在のview current-pageが更新される毎に再レンダリング"
   []
-  (println "render ")
-  ((session/get :current-page default-view)))
+  (let [current-page (session/get :current-page default-view)] 
+    (println "render")
+    (current-page)))
 
 (defn start-view
   [id]
@@ -117,7 +118,7 @@
         (let [status (-> (get edn "State") 
                          (select-keys ["Status" "Restarting" "StartedAt" "FinishedAt"]))]
           (list
-           [:tr [:th {:row-span 4} "ステータス" ] [:th {:width "10%"} "起動状態"] 
+           [:tr {:key 1} [:th {:row-span 4} "ステータス" ] [:th {:width "10%"} "起動状態"] 
             [:td 
              (let [running  (get status "Status")] 
                [:div 
@@ -129,9 +130,9 @@
                   "exited" [:button.btn.btn-primary.btn-sm 
                             {:on-click #(accountant/navigate! (str "/containers/" (get edn "Id") "/start")) } 
                             "start"])]) ]]
-           [:tr [:th "再起動中？"] [:td (if-let [restarting (get status "Restarting")] restarting "false")]]
-           [:tr [:th "開始時刻"] [:td (get status "StartedAt")]]
-           [:tr [:th "終了時刻"] [:td (get status "FinishedAt")]]))
+           [:tr {:key 2} [:th "再起動中？"] [:td (if-let [restarting (get status "Restarting")] restarting "false")]]
+           [:tr {:key 3} [:th "開始時刻"] [:td (get status "StartedAt")]]
+           [:tr {:key 4} [:th "終了時刻"] [:td (get status "FinishedAt")]]))
         [:tr [:th "作成時刻"] [:td {:col-span 2}(get edn "Created")]]]]]]))
 
 

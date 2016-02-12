@@ -1,21 +1,20 @@
 (ns docker.ui.app
-  (:require-macros  [cljs.core.async.macros :refer  [go]])
+  (:require-macros [cljs.core.async.macros :refer  [go]])
   (:require
    [chord.client :refer [ws-ch]]
    [secretary.core :as secretary :refer-macros  [defroute]]
    [ajax.core :as ajax]
-   [cljs.core.async :refer  [put! chan <! >! timeout close!]]
+   [cljs.core.async :refer [put! chan <! >! timeout close!]]
    [docker.ui.views :as view]
    [clojure.data :as data]
    [accountant.core :as accountant]
    [reagent.session :as session]
    [clojure.string :as string]
-   [reagent.core :as reagent :refer  [atom]]
+   [reagent.core :as reagent :refer [atom]]
    [clojure.browser.repl :as repl]
    [cljs.reader :as reader]))
 
 (enable-console-print!)
-
 
 (defn ^:export run
   []
@@ -26,10 +25,13 @@
          (if error
            (do
             (close! ws-ch)
-            (js/console.log  "Uh oh:" error))
+            (println "Uh oh:" error))
            (let [response message]
-             ;responseがlistになっているはずだがlistにしなくてはならない
-             (session/put! :stats message)
+             ;現在ページがstatsの時のみstateを更新して再レンダリング
+             ;reagentではstateが一個なので、この判定しないと他のpageでも再レンダリングが走ってしまう。
+             ;もしくはreagent.sessionとは切り離す必要がある
+             (when (session/get :stats-updatable)
+               (session/put! :stats message))
              (recur )))))))
 
   (accountant/configure-navigation!)

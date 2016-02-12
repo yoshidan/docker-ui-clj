@@ -36,4 +36,6 @@
 (defroutes routes 
   (context "/api" []
            (GET "/containers/:id" [id] (api-response (docker/container id)))
+           (POST "/containers/:id/start" [id] (api-response (docker/start id)))
+           (POST "/containers/:id/stop" [id] (api-response (docker/stop id)))
            (GET "/health"  [] (api-response  {:status "UP"}))))
