@@ -2,6 +2,7 @@
   (:require
    [reagent.session :as session ]
    [ajax.core :as ajax]
+   [reagent.core :as reagent]
    [accountant.core :as accountant]))
 
 (defn default-view 
@@ -62,6 +63,9 @@
    [:h1 "Dokcer Info"]
    [:div.alert.alert-success {:role "alert"} (str id "の停止に成功しました")]])
 
+
+
+(def stats (reagent/atom {}))
 (defn stats-view []
   [:div 
    [:h1 "Docker I/O"]
@@ -76,7 +80,7 @@
        [:th "NET I/O"]
        [:th "BLOCK I/O"]]]
      [:tbody 
-      (for [container (:detail (session/get :stats )) ]
+      (for [container (:detail (:stats @stats)) ]
         [:tr {:key (:id container) :on-click #(accountant/navigate! (str "/containers/" (:id container))) } 
          [:td (:name container) ]
          [:td (str (:percent (:cpu container)))]
@@ -84,7 +88,7 @@
          [:td (str (:percent (:memory container)))]
          [:td (str (:rx-bytes (:network container)) " / " (:tx-bytes (:network container)) )]
          [:td (str (:read-io (:block-io container)) " / " (:write-io (:block-io container)) )]])]
-     (let [summary (:summary (session/get :stats))] 
+     (let [summary (:summary (:stats @stats))] 
        [:tfoot
         [:tr 
          [:th "SUM" ]

@@ -2,17 +2,12 @@
   (:require-macros [cljs.core.async.macros :refer  [go]])
   (:require
    [chord.client :refer [ws-ch]]
-   [secretary.core :as secretary :refer-macros  [defroute]]
-   [ajax.core :as ajax]
    [cljs.core.async :refer [put! chan <! >! timeout close!]]
    [docker.ui.views :as view]
    [clojure.data :as data]
    [accountant.core :as accountant]
-   [reagent.session :as session]
-   [clojure.string :as string]
-   [reagent.core :as reagent :refer [atom]]
-   [clojure.browser.repl :as repl]
-   [cljs.reader :as reader]))
+   [reagent.core :as reagent]
+   [clojure.browser.repl :as repl]))
 
 (enable-console-print!)
 
@@ -27,11 +22,9 @@
             (close! ws-ch)
             (println "Uh oh:" error))
            (let [response message]
-             ;現在ページがstatsの時のみstateを更新して再レンダリング
-             ;reagentではstateが一個なので、この判定しないと他のpageでも再レンダリングが走ってしまう。
-             ;もしくはreagent.sessionとは切り離す必要がある
-             (when (session/get :stats-updatable)
-               (session/put! :stats message))
+             ;reagent.sessionではstateが一個なので、session使うと関係ないキーでも
+             ;session使っているpageで再レンダリングが走ってしまう。
+             (swap! view/stats assoc :stats message)
              (recur )))))))
 
   (accountant/configure-navigation!)

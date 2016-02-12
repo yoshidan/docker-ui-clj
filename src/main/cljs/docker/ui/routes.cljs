@@ -8,13 +8,11 @@
 
 
 (secretary/defroute "/containers/:id" {:as params}
-  (session/put! :stats-updatable false)
   (ajax/GET (str "/api/containers/" (:id params))  
             {:handler (fn [res] (session/put! :current-page #(view/info-view res)))
              :error-handler js/console.log}))
 
 (secretary/defroute "/stats" {} 
-  (session/put! :stats-updatable true)
   (session/put! :current-page view/stats-view ))
 
 (secretary/defroute "/containers/:id/start" {:keys [id]} 
