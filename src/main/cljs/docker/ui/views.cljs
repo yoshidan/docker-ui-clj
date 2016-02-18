@@ -3,19 +3,13 @@
    [reagent.session :as session ]
    [ajax.core :as ajax]
    [reagent.core :as reagent]
+   [re-frame.core :as re-frame]
    [accountant.core :as accountant]))
 
 (defn default-view 
   "URL直接指定などされた時のdisatch-currentでajax通信中でcurrent-pageがnilになるのを防止する"
   []
   [:div [:span ""]])
-
-(defn current-view
-  "現在のview current-pageが更新される毎に再レンダリング"
-  []
-  (let [current-page (session/get :current-page default-view)] 
-    (println "render")
-    (current-page)))
 
 (defn start-view
   [id]
@@ -63,41 +57,41 @@
    [:h1 "Dokcer Info"]
    [:div.alert.alert-success {:role "alert"} (str id "の停止に成功しました")]])
 
-
-
-(def stats (reagent/atom {}))
 (defn stats-view []
-  [:div 
-   [:h1 "Docker I/O"]
-   [:div 
-    [:table.table.table-hover
-     [:thead
-      [:tr 
-       [:th "CONTAINER"]
-       [:th "CPU %"]
-       [:th "MEM USAGE / LIMIT"]
-       [:th "MEM %"]
-       [:th "NET I/O"]
-       [:th "BLOCK I/O"]]]
-     [:tbody 
-      (for [container (:detail (:stats @stats)) ]
-        [:tr {:key (:id container) :on-click #(accountant/navigate! (str "/containers/" (:id container))) } 
-         [:td (:name container) ]
-         [:td (str (:percent (:cpu container)))]
-         [:td (str (:usage (:memory container)) " / " (:limit (:memory container)))]
-         [:td (str (:percent (:memory container)))]
-         [:td (str (:rx-bytes (:network container)) " / " (:tx-bytes (:network container)) )]
-         [:td (str (:read-io (:block-io container)) " / " (:write-io (:block-io container)) )]])]
-     (let [summary (:summary (:stats @stats))] 
-       [:tfoot
-        [:tr 
-         [:th "SUM" ]
-         [:td (:percent (:cpu summary)) ]
-         [:td (:usage (:memory summary)) ]
-         [:td ]
-         [:td (str (:rx-bytes (:network summary)) " / " (:tx-bytes (:network summary)) )]
-         [:td (str (:read-io (:block-io summary)) " / " (:write-io (:block-io summary)) )]
-         ]])]]] )
+  (let [stats-ratom (re-frame/subscribe [:stats])] 
+    ;subscribeする場合はinnerにすることで:stats以外の変更時のre-renderを抑止
+    (fn [] 
+      [:div 
+       [:h1 "Docker I/O"]
+       [:div 
+        [:table.table.table-hover
+         [:thead
+          [:tr 
+           [:th "CONTAINER"]
+           [:th "CPU %"]
+           [:th "MEM USAGE / LIMIT"]
+           [:th "MEM %"]
+           [:th "NET I/O"]
+           [:th "BLOCK I/O"]]]
+         [:tbody 
+          (for [container (:detail @stats-ratom) ]
+            [:tr {:key (:id container) :on-click #(accountant/navigate! (str "/containers/" (:id container))) } 
+             [:td (:name container) ]
+             [:td (str (:percent (:cpu container)))]
+             [:td (str (:usage (:memory container)) " / " (:limit (:memory container)))]
+             [:td (str (:percent (:memory container)))]
+             [:td (str (:rx-bytes (:network container)) " / " (:tx-bytes (:network container)) )]
+             [:td (str (:read-io (:block-io container)) " / " (:write-io (:block-io container)) )]])]
+         (let [summary (:summary @stats-ratom)] 
+           [:tfoot
+            [:tr 
+             [:th "SUM" ]
+             [:td (:percent (:cpu summary)) ]
+             [:td (:usage (:memory summary)) ]
+             [:td ]
+             [:td (str (:rx-bytes (:network summary)) " / " (:tx-bytes (:network summary)) )]
+             [:td (str (:read-io (:block-io summary)) " / " (:write-io (:block-io summary)) )]
+             ]])]]])))
 
 (defn info-view
   "コンテナの情報"
@@ -139,4 +133,11 @@
            [:tr {:key 4} [:th "終了時刻"] [:td (get status "FinishedAt")]]))
         [:tr [:th "作成時刻"] [:td {:col-span 2}(get edn "Created")]]]]]]))
 
-
+(defn current-view
+  "現在のview current-pageが更新される毎に再レンダリング"
+  []
+  (let [current-page-ratom (re-frame/subscribe [:current-page])]  
+    (fn [] 
+      (if (nil? @current-page-ratom) 
+        [default-view] 
+        [@current-page-ratom]))))

@@ -2,36 +2,31 @@
   (:require
    [secretary.core :as secretary]
    [docker.ui.views :as view]
-   [reagent.session :as session]
-   [ajax.core :as ajax]))
+   [re-frame.core :as re-frame]))
 
-
-
-(secretary/defroute "/containers/:id" {:as params}
-  (ajax/GET (str "/api/containers/" (:id params))  
-            {:handler (fn [res] (session/put! :current-page #(view/info-view res)))
-             :error-handler js/console.log}))
+(secretary/defroute "/containers/:id" {:keys [id]}
+  (re-frame/dispatch [:inspect-container id]))
 
 (secretary/defroute "/stats" {} 
-  (session/put! :current-page view/stats-view ))
+  (re-frame/dispatch [:change-view view/stats-view]))
 
 (secretary/defroute "/containers/:id/start" {:keys [id]} 
-  (session/put! :current-page #(view/start-view id )))
+  (re-frame/dispatch [:change-view #(view/start-view id) ]))
 
 (secretary/defroute "/containers/:id/start/complete" {:keys [id]} 
-  (session/put! :current-page #(view/start-complete-view id)))
+  (re-frame/dispatch [:change-view #(view/start-complete-view id) ]))
 
 (secretary/defroute "/containers/:id/start/failure" {:keys [id]} 
-  (session/put! :current-page #(view/start-failure-view id)))
+  (re-frame/dispatch [:change-view #(view/start-failure-view id) ]))
 
 (secretary/defroute "/containers/:id/stop" {:keys [id]} 
-  (session/put! :current-page #(view/stop-view id)))
+  (re-frame/dispatch [:change-view #(view/stop-view id) ]))
 
 (secretary/defroute "/containers/:id/stop/complete" {:keys [id]} 
-  (session/put! :current-page #(view/stop-complete-view id)))
+  (re-frame/dispatch [:change-view #(view/stop-complete-view id) ]))
 
 (secretary/defroute "/containers/:id/stop/failure" {:keys [id]} 
-  (session/put! :current-page #(view/stop-failure-view id)))
+  (re-frame/dispatch [:change-view #(view/stop-failure-view id) ]))
 
 
 
