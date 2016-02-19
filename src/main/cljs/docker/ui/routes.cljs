@@ -1,6 +1,7 @@
 (ns docker.ui.routes 
+  (:require-macros 
+   [secretary.core :refer [defroute]])
   (:require
-   [secretary.core :as secretary :include-macros true :refer-macros  [defroute]]
    [docker.ui.views :as view]
    [re-frame.core :as re-frame]))
 
@@ -8,7 +9,6 @@
   (re-frame/dispatch [:inspect-container id]))
 
 (defroute "/stats" {} 
-  (println "stats")
   (re-frame/dispatch [:change-view view/stats-view]))
 
 (defroute "/containers/:id/start" {:keys [id]} 
