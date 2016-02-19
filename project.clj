@@ -69,7 +69,7 @@
                                  {:app
                                   {:source-paths  ["src/dev/cljs"]
                                    :compiler
-                                   {:main  "docker.ui.app"
+                                   {:main  "docker.ui.devapp"
                                     :optimizations :none
                                     :asset-path  "/assets/js/out"}}}}
                     :figwheel  {:server-port 3450

@@ -14,7 +14,6 @@
 (re-frame/register-handler 
  :change-view 
  (fn [db [_ page]]
-   (println "view change")
    (assoc db :current-page page)))
 
 (re-frame/register-handler              
