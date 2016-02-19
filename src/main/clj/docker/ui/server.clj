@@ -8,11 +8,16 @@
    [docker.ui.routes.site :as site]
    [docker.ui.middleware :as mw]
    [clojure.tools.logging :as log]
+   [net.cgrand.reload :refer  [auto-reload]]
+   [ring.middleware.reload :as reload]
    [compojure.core :refer  [routes context]]
+   [environ.core :refer [env] :as environ]
    [ring.middleware.defaults :refer  [wrap-defaults api-defaults site-defaults]]
    [ring.util.response :refer  [response status content-type]]
    [org.httpkit.server :refer  [run-server]]))
 
+(defn- dev? [] 
+  (environ/env :dev?))
 
 (defn api-handler
   "API用のmiddleware, routesを束ねたハンドラ。
@@ -20,21 +25,22 @@
    これはAPI用のハンドラがサイト用ハンドラの前段に動くため、スキップ処理を入れないと
    画面系へのリクエストに対してもAPI用のmiddlewareが動作してしまうため。"
   [handler]
-  (fn [{:keys  [uri] :as request}]
-    (when  (. uri startsWith  "/api")
-      (handler request))))
+  (let [h (if (dev?) (reload/wrap-reload handler) handler) ]
+    (fn [{:keys  [uri] :as request}]
+      (when (. uri startsWith  "/api")
+        (h request)))))
 
 (defn ws-handler
   [handler]
-  (fn [{:keys [uri] :as request}]
-    (when  (. uri startsWith "/ws")
-      (handler request))))
-
+  (let [h (if (dev?) (reload/wrap-reload handler) handler )] 
+    (fn [{:keys [uri] :as request}]
+      (when (. uri startsWith "/ws")
+        (h request)))))
 
 (defn site-handler
   "サイト用のmiddleware, routesを束ねたハンドラ。"
   [handler]
-  handler)
+  (if (dev?) (reload/wrap-reload handler) handler))
 
 (def ^:private handlers
   (let  [api  (-> #'api/routes
@@ -54,10 +60,9 @@
 (def ^:private http-handler
     (apply routes handlers))
 
-
-
 (defn -main  
   []
+  (when (dev?) (do "Reloading Server " (auto-reload *ns*)))
   (log/info "Starting stats request for docker")
   ;docker-ps/stats
   (async/go-loop 
