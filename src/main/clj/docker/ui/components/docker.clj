@@ -34,14 +34,13 @@
 
 (defn- handle-get
   [response]
-  (let [{:keys [status error body]} @response]
-    (log/info status)
+  (let [{:keys [status error body]} @response] 
     (cond
      (some? error)  
      (do
       (log/error "Failed  exception = %s" error)
       (f/fail "external system connection errorr"))
-     (== 200 status) (do (log/info "success") body) 
+     (== 200 status) body
      :else  
      (do
       (log/error "Failed, status = %s, body = %s" status body)
@@ -50,13 +49,12 @@
 (defn- handle-post
   [response]
   (let [{:keys [status error body]} @response]
-    (log/info status)
     (cond
      (some? error)  
      (do
       (log/error "Failed  exception = %s" error)
       (f/fail "external system connection errorr"))
-     (== 204 status) (log/info "success")
+     (== 204 status) nil 
      :else  
      (do
       (log/error "Failed, status = %s, body = %s" status body)
@@ -136,33 +134,18 @@
         #^java.net.URLConnection con (->> (java.net.URL. url) (.openConnection)  )]
     (.setReadTimeout con 3000) 
     ;停止中のコンテナはreadTimeoutになる
-    (try (readLine (io/reader (.getInputStream con )) 
-                   (fn [data]
-                     (let [edn (json/parse-string data true)]
-                       ;数字先頭のkeywordにした場合parseできずエラーになるためid文字列を先頭につける
-                       (swap! docker-stats assoc (keyword (str "id" id)) 
-                              {:name id 
-                               :id (:Id container)
-                               :down false
-                               :memory (with-memory-stats id edn)
-                               :network (with-network-stats id edn)
-                               :block-io (with-block-io-stats id edn)
-                               :cpu (with-cpu-stats id edn)} ))))
-         ;timeout (コンテナstop 以外は終了)
-         (catch java.net.SocketTimeoutException e
-           (swap! docker-stats assoc (keyword (str "id" id)) 
-                  {:name id 
-                   :id (:Id container)
-                   :down true
-                   :memory {:percent "0%" :usage "0MB" :limit "0GB"}
-                   :network {:rx-bytes "0MB" :tx-bytes "0MB"} 
-                   :block-io {:read-io "0KB" :write-io "0KB"} 
-                   :cpu {:percent "0%"}} ))
-         (catch Exception e
-           (swap! docker-stats dissoc (keyword (str "id" id)))
-           (throw e))))
-  (Thread/sleep 3000)
-  (recur container) )
+    (readLine 
+     (io/reader (.getInputStream con)) 
+     (fn [data]
+       (let [edn (json/parse-string data true)]
+         (swap! docker-stats assoc id 
+                {:name id 
+                 :id (:Id container)
+                 :down false
+                 :memory (with-memory-stats id edn)
+                 :network (with-network-stats id edn)
+                 :block-io (with-block-io-stats id edn)
+                 :cpu (with-cpu-stats id edn)} ))))))
 
 (defn- summary
   "合計の取得"
@@ -188,21 +171,41 @@
 (defn stats-all 
   "利用可能な全コンテナのdocker-statsを実行する"
   []
-  (->> 
-   (ps)
-   (filter #(not (contains? @stats-processing (named-id %) ))) ;処理中以外
-   (map  
-    (fn [container] 
-      (swap! stats-processing assoc (named-id container) true)
-      ;非同期でstats取得
-      (async/go
-       []
-       (try
-        ;TODO 非同期IOにしてスレッド占有しないようにする
-        (stats container)
-        (catch Exception e
-          (swap! stats-processing dissoc (named-id container)))))))
-   (doall)))
+  (let [containers (ps)
+        id-list (set (map named-id containers))]
+    ;存在しないstatsは削除
+    (doseq [id-in-stats (keys @docker-stats)]
+      (when-not (.contains id-list id-in-stats)
+        (do (swap! docker-stats dissoc id-in-stats)
+            (println "container " id-in-stats " removed"))))
+    ;非同期でstats取得
+    (->> 
+     (filter #(not (contains? @stats-processing (named-id %))) containers )
+     (map  
+      (fn [container] 
+        (let [id (named-id container)]
+          (swap! stats-processing assoc id true)
+          (async/go
+           []
+           (try
+            ;TODO 非同期IOにしてスレッド占有しないようにする
+            (stats container)
+            (catch java.net.SocketTimeoutException e
+              (println "container " id " stoped")
+              (swap! docker-stats assoc id 
+                     {:name id 
+                      :id (:Id container)
+                      :down true
+                      :memory {:percent "0%" :usage "0MB" :limit "0GB"}
+                      :network {:rx-bytes "0MB" :tx-bytes "0MB"} 
+                      :block-io {:read-io "0KB" :write-io "0KB"} 
+                      :cpu {:percent "0%"}})
+              (swap! stats-processing dissoc id))
+            (catch Exception e
+              (println "container " id " removed")
+              (swap! docker-stats dissoc id)
+              (swap! stats-processing dissoc id)))))))
+     (doall))))
 
 (defn publish-stats
   "statsの結果をpublishする"
