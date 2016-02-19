@@ -42,9 +42,10 @@
     [:link {:rel "stylesheet" :href "/assets/css/out/screen.css"}]
     [:link {:rel "stylesheet" :href "https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css"}]]
    [:body 
-    [:div {:id "app" :class "container"} 
-     [:script {:src "/assets/js/app.js"}]
-     [:script "docker.ui.app.run();"]]]))
+    [:div {:id "app" :class "container"}]
+    [:script {:src "/assets/js/app.js"}]
+    [:script "docker.ui.app.run();"]
+    ]))
 
 (defroutes routes
   (resources  "/")

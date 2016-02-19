@@ -7,12 +7,12 @@
    [chord.client :refer [ws-ch]]
    [cljs.core.async :refer [put! chan <! >! timeout close!]]
    [docker.ui.views :as view]
+   [docker.ui.routes :as routes] ;利用しなくても参照に加えないとoptimizations :noneの時にビルドされない
    [accountant.core :as accountant]
    [reagent.core :as reagent]
    [re-frame.core :as re-frame]
    [clojure.browser.repl :as repl]))
 
-(enable-console-print!)
 
 ;----------------------------
 ; subscribers
@@ -41,6 +41,7 @@
 (re-frame/register-handler 
  :change-view 
  (fn [db [_ page]]
+   (println "view change")
    (assoc db :current-page page)))
 
 (re-frame/register-handler              
@@ -60,6 +61,7 @@
               :error-handler println}) 
    (assoc db :loading? true)))
 
+
 (defn ^:export run
   []
   (go 
@@ -74,10 +76,7 @@
              ;reagent.sessionではstateが一個なので、session使うと関係ないキーでも
              ;session使っているpageで再レンダリングが走ってしまう。
              (re-frame/dispatch [:update-stats message])
-             (recur )))))))
-
+             (recur)))))))
   (accountant/configure-navigation!)
   (accountant/dispatch-current!)
   (reagent/render-component [view/current-view] (.getElementById js/document "app") ))
-
-

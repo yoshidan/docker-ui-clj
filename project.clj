@@ -43,26 +43,42 @@
             [lein-ring "0.9.3"]
             [lein-environ "1.0.0"]
             [lein-ancient "0.5.5"]
+            [lein-figwheel "0.5.0-6"]
             [lein-garden "0.2.6"]] 
+
+  :clean-targets ^{:protect false} ["src/main/resources/public/assets/js/app.js"
+                                    "src/main/resources/public/assets/js/out"
+                                    "src/main/resources/public/assets/js/out.js.map"
+                                    "src/main/resources/public/assets/css/screen.css"]
 
   :cljsbuild {:builds {:app {:source-paths ["src/main/cljs"]
                              :compiler {:output-to     "src/main/resources/public/assets/js/app.js"
                                         :output-dir    "src/main/resources/public/assets/js/out"
-                                        :source-map    "src/main/resources/public/assets/js/out.js.map"
-                                        :optimizations :simple
-                                        :pretty-print true}}}}
+                                        :source-map   true
+                                        :pretty-print true
+                                        :optimizations :none}}}}
   :garden {:builds [{:source-paths  ["src/main/css"]
                      :stylesheet docker.ui.css/screen
                      :compiler  {:output-to "src/main/resources/public/assets/css/out/screen.css"}
                      :pretty-print? false}]}
 
+
   :profiles  {:dev {:env {:dev? true
-                          :docker-tcp-address "192.168.99.100:2376"}}
+                          :docker-tcp-address "192.168.99.100:2376"}
+                    :cljsbuild  {:builds
+                                 {:app
+                                  {:source-paths  ["src/dev/cljs"]
+                                   :compiler
+                                   {:main  "docker.ui.app"
+                                    :optimizations :none
+                                    :asset-path  "/assets/js/out"}}}}
+                    :figwheel  {:server-port 3450
+                                :repl        true}}
               :uberjar {:omit-source true
-                        :hooks  [leiningen.cljsbuild]
+                        :hooks  [leiningen.garden leiningen.cljsbuild]
                         :cljsbuild {:jar true
-                                    :builds {:app {:compiler {
-                                                              :optimizations :whitespace
+                                    :builds {:app {:compiler {:source-map "src/main/resources/public/assets/js/out.js.map"
+                                                              :optimizations :advanced
                                                               :pretty-print false}}}}
                         :manifest {"Class-Path" "conf/"}
                         :aot :all}}

@@ -1,4 +1,5 @@
 (ns docker.ui.server 
+  (:gen-class)
   (:require
    [clojure.core.async :as async]
    [docker.ui.components.docker :as docker]
@@ -11,6 +12,7 @@
    [ring.middleware.defaults :refer  [wrap-defaults api-defaults site-defaults]]
    [ring.util.response :refer  [response status content-type]]
    [org.httpkit.server :refer  [run-server]]))
+
 
 (defn api-handler
   "API用のmiddleware, routesを束ねたハンドラ。

@@ -59,6 +59,7 @@
 
 (defn stats-view []
   (let [stats-ratom (re-frame/subscribe [:stats])] 
+    (println stats-ratom)
     ;subscribeする場合はinnerにすることで:stats以外の変更時のre-renderを抑止
     (fn [] 
       [:div 
