@@ -65,7 +65,7 @@
 
 
   :profiles  {:dev {:env {:dev? true
-                          :docker-tcp-address "192.168.99.100:2376"}
+                          :docker-tcp-address "localhost:2376"}
                     :cljsbuild  {:builds
                                  {:app
                                   {:source-paths  ["src/dev/cljs"]

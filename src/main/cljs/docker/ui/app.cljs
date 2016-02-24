@@ -17,7 +17,14 @@
 (defn ^:export run
   []
   (go 
-   (let  [{:keys  [ws-channel]}  (<! (ws-ch  "ws://localhost:3000/ws/docker/stats" (:format :edn) ))]
+   (let  
+     [ws-prefix (let [location  (.-location js/window)
+                      protocol  (.-protocol location)
+                      host  (.-host location)]
+                  (if (= protocol  "https")
+                    (str  "wss://" host)
+                    (str  "ws://" host)))
+      {:keys [ws-channel]}  (<! (ws-ch  (str ws-prefix "/ws/docker/stats") (:format :edn) ))]
      (loop []
        (let [{:keys  [message error]}  (<! ws-channel)]
          (if error
