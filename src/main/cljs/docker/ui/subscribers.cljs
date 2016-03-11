@@ -10,7 +10,7 @@
    (reaction (:stats @db))))
 
 (re-frame/register-sub
- :current-page
+ :current-view
  (fn [db]      
-   (reaction (:current-page @db))))
+   (reaction (:current-view @db))))
 

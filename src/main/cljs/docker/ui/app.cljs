@@ -16,6 +16,7 @@
 
 (defn ^:export run
   []
+  (re-frame/dispatch-sync [:initialize-db])
   (go 
    (let  
      [ws-prefix (let [location  (.-location js/window)
@@ -28,9 +29,7 @@
      (loop []
        (let [{:keys  [message error]}  (<! ws-channel)]
          (if error
-           (do
-            (close! ws-ch)
-            (println "Uh oh:" error))
+           (close! ws-ch)
            (let [response message]
              ;reagent.sessionではstateが一個なので、session使うと関係ないキーでも
              ;session使っているpageで再レンダリングが走ってしまう。
@@ -38,4 +37,4 @@
              (recur)))))))
   (accountant/configure-navigation!)
   (accountant/dispatch-current!)
-  (reagent/render-component [view/current-view] (.getElementById js/document "app") ))
+  (reagent/render [view/current-view] (.getElementById js/document "app") ))

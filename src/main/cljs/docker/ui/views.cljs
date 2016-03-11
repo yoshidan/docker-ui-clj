@@ -6,10 +6,22 @@
    [re-frame.core :as re-frame]
    [accountant.core :as accountant]))
 
+(defn- failure-result
+  [id message]
+  [:div 
+   [:h1 "Docker Info"]
+   [:div.alert.alert-danger {:role "alert"} (str id message)]])
+
+(defn- success-result
+  [id message]
+  [:div 
+   [:h1 "Docker Info"]
+   [:div.alert.alert-success {:role "alert"} (str id message)]])
+
 (defn default-view 
   "URL直接指定などされた時のdisatch-currentでajax通信中でcurrent-pageがnilになるのを防止する"
   []
-  [:div [:span ""]])
+  [:div ])
 
 (defn start-view
   [id]
@@ -17,22 +29,16 @@
    [:h1 "Dokcer Info"]
    [:div.alert.alert-info {:role "alert"} "コンテナを起動しますか？"
     [:button.btn.btn-primary
-     {:on-click #(ajax/POST (str "/api/containers/" id "/start") 
-                            {:handler (fn [e] (accountant/navigate! (str "/containers/" id "/start/complete")))
-                             :error-handler (fn [e] (accountant/navigate! (str "/containers/" id "/start/failure")))})}
+     {:on-click #(re-frame/dispatch [:start-container id])}
      "OK" ]]])
 
 (defn start-failure-view
   [id]
-  [:div 
-   [:h1 "Dokcer Info"]
-   [:div.alert.alert-danger {:role "alert"} (str id "の起動に失敗しました")]])
+  (failure-result id "の起動に失敗しました"))
 
 (defn start-complete-view
   [id]
-  [:div 
-   [:h1 "Dokcer Info"]
-   [:div.alert.alert-success {:role "alert"} (str id "の起動に成功しました")]])
+  (success-result id "の起動に成功しました"))
 
 (defn stop-view
   [id]
@@ -40,22 +46,16 @@
    [:h1 "Dokcer Info"]
    [:div.alert.alert-info {:role "alert"} "コンテナを停止しますか？"
     [:button.btn.btn-primary
-     {:on-click #(ajax/POST (str "/api/containers/" id "/stop") 
-                            {:handler (fn [e] (accountant/navigate! (str "/containers/" id "/stop/complete")))
-                             :error-handler (fn [e] (accountant/navigate! (str "/containers/" id "/stop/failure")))})}
+     {:on-click #(re-frame/dispatch [:stop-container id])}
      "OK"]]])
 
 (defn stop-failure-view
   [id]
-  [:div 
-   [:h1 "Dokcer Info"]
-   [:div.alert.alert-danger {:role "alert"} (str id "の停止に失敗しました")]])
+  (failure-result id "の停止に失敗しました"))
 
 (defn stop-complete-view
   [id]
-  [:div 
-   [:h1 "Dokcer Info"]
-   [:div.alert.alert-success {:role "alert"} (str id "の停止に成功しました")]])
+  (success-result id "の停止に成功しました"))
 
 (defn stats-view []
   (let [stats-ratom (re-frame/subscribe [:stats])] 
@@ -75,7 +75,7 @@
            [:th "BLOCK I/O"]]]
          [:tbody 
           (for [container (:detail @stats-ratom) ]
-            [:tr {:key (:id container) :on-click #(accountant/navigate! (str "/containers/" (:id container))) } 
+            [:tr {:key (:id container) :on-click #(re-frame/dispatch [:navigate-info-view (:id container)]) } 
              [:td (:name container) ]
              [:td (str (:percent (:cpu container)))]
              [:td (str (:usage (:memory container)) " / " (:limit (:memory container)))]
@@ -124,7 +124,7 @@
                 (case running
                   "running" [:button.btn.btn-danger.btn-sm 
                              {:on-click #(accountant/navigate! (str "/containers/" (get edn "Id") "/stop")) }
-                            "stop" ]
+                             "stop" ]
                   "exited" [:button.btn.btn-primary.btn-sm 
                             {:on-click #(accountant/navigate! (str "/containers/" (get edn "Id") "/start")) } 
                             "start"])]) ]]
@@ -136,8 +136,5 @@
 (defn current-view
   "現在のview current-pageが更新される毎に再レンダリング"
   []
-  (let [current-page-ratom (re-frame/subscribe [:current-page])]  
-    (fn [] 
-      (if (nil? @current-page-ratom) 
-        [default-view] 
-        [@current-page-ratom]))))
+  (let [current-page-ratom (re-frame/subscribe [:current-view])]  
+    (fn [] [@current-page-ratom])))
