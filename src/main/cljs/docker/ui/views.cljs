@@ -1,6 +1,10 @@
 (ns docker.ui.views
+  (:require-macros 
+   [cljs.core.async.macros :refer [go]])
   (:require
-   [reagent.session :as session ]
+   [chord.client :refer [ws-ch]]
+   [cljs.core.async :refer [put! chan <! >! timeout close!]]
+   [reagent.core :as reagent]
    [ajax.core :as ajax]
    [reagent.core :as reagent]
    [re-frame.core :as re-frame]
@@ -60,49 +64,63 @@
 
 (defn stats-view []
   (let [stats-ratom (re-frame/subscribe [:stats])] 
-    ;subscribeする場合はinnerにすることで:stats以外の変更時のre-renderを抑止
-    (fn [] 
-      [:div 
-       [:h1 "Docker I/O"]
-       [:div 
-        [:table.table.table-hover
-         [:thead
-          [:tr 
-           [:th "CONTAINER"]
-           [:th "CPU %"]
-           [:th "MEM USAGE / LIMIT"]
-           [:th "MEM %"]
-           [:th "NET I/O"]
-           [:th "BLOCK I/O"]]]
-         [:tbody 
-          (for [container (:detail @stats-ratom) ]
-            [:tr {:key (:id container) :on-click #(re-frame/dispatch [:navigate-info-view (:id container)]) } 
-             [:td (:name container) ]
-             [:td (gstring/format "%.2f" (:percent (:cpu container))) ]
-             [:td (str (gstring/format "%.2fMB" (-> (:usage (:memory container)) (/ 1024) (/ 1024))) 
-                       " / " 
-                       (gstring/format "%.2fGB" (-> (:limit (:memory container)) (/ 1024) (/ 1024) (/ 1024))))]
-             [:td (gstring/format "%.2f" (:percent (:memory container)))]
-             [:td (str (gstring/format "%.2fKB" (-> (:rx-bytes (:network container)) (/ 1024)  )) 
-                       " / " 
-                       (gstring/format "%.2fKB" (-> (:tx-bytes (:network container)) (/ 1024) )) )]
-             [:td (str (gstring/format "%.2fMB" (-> (:read-io (:block-io container)) (/ 1024) (/ 1024) )) 
-                       " / " 
-                       (gstring/format "%.2fMB" (-> (:write-io (:block-io container)) (/ 1024) (/ 1024) )) )]])]
-         (when-let [summary (:summary @stats-ratom)] 
-           [:tfoot
+    (reagent/create-class
+     {:component-did-mount 
+      (fn []
+        (go 
+         (let  
+           [url (str "ws://" (.host (.-location js/window)) "/ws/docker/stats")
+            {:keys [ws-channel]}  (<! (ws-ch url (:format :edn) ))]
+           (loop []
+             (let [{:keys  [message error]}  (<! ws-channel)]
+               (if error
+                 (close! ws-ch)
+                 (do
+                  (re-frame/dispatch [:update-stats message])
+                  (recur))))))))
+      :reagent-render
+      (fn [] 
+        [:div 
+         [:h1 "Docker I/O"]
+         [:div 
+          [:table.table.table-hover
+           [:thead
             [:tr 
-             [:th "SUM" ]
-             [:td (gstring/format "%.2f" (:percent (:cpu summary))) ]
-             [:td (gstring/format "%.2fMB" (-> (:usage (:memory summary)) (/ 1024) (/ 1024) )) ]
-             [:td ]
-             [:td (str (gstring/format "%.2fKB" (-> (:rx-bytes (:network summary)) (/ 1024) )) 
-                       " / " 
-                       (gstring/format "%.2fKB" (-> (:tx-bytes (:network summary)) (/ 1024) )) )]
-             [:td (str (gstring/format "%.2fMB" (-> (:read-io (:block-io summary)) (/ 1024) (/ 1024) )) 
-                       " / " 
-                       (gstring/format "%.2fMB" (-> (:write-io (:block-io summary)) (/ 1024) (/ 1024) )) )]
-             ]])]]])))
+             [:th "CONTAINER"]
+             [:th "CPU %"]
+             [:th "MEM USAGE / LIMIT"]
+             [:th "MEM %"]
+             [:th "NET I/O"]
+             [:th "BLOCK I/O"]]]
+           [:tbody 
+            (for [container (:detail @stats-ratom) ]
+              [:tr {:key (:id container) :on-click #(re-frame/dispatch [:navigate-info-view (:id container)]) } 
+               [:td (:name container) ]
+               [:td (gstring/format "%.2f" (:percent (:cpu container))) ]
+               [:td (str (gstring/format "%.2fMB" (-> (:usage (:memory container)) (/ 1024) (/ 1024))) 
+                         " / " 
+                         (gstring/format "%.2fGB" (-> (:limit (:memory container)) (/ 1024) (/ 1024) (/ 1024))))]
+               [:td (gstring/format "%.2f" (:percent (:memory container)))]
+               [:td (str (gstring/format "%.2fKB" (-> (:rx-bytes (:network container)) (/ 1024)  )) 
+                         " / " 
+                         (gstring/format "%.2fKB" (-> (:tx-bytes (:network container)) (/ 1024) )) )]
+               [:td (str (gstring/format "%.2fMB" (-> (:read-io (:block-io container)) (/ 1024) (/ 1024) )) 
+                         " / " 
+                         (gstring/format "%.2fMB" (-> (:write-io (:block-io container)) (/ 1024) (/ 1024) )) )]])]
+           (when-let [summary (:summary @stats-ratom)] 
+             [:tfoot
+              [:tr 
+               [:th "SUM" ]
+               [:td (gstring/format "%.2f" (:percent (:cpu summary))) ]
+               [:td (gstring/format "%.2fMB" (-> (:usage (:memory summary)) (/ 1024) (/ 1024) )) ]
+               [:td ]
+               [:td (str (gstring/format "%.2fKB" (-> (:rx-bytes (:network summary)) (/ 1024) )) 
+                         " / " 
+                         (gstring/format "%.2fKB" (-> (:tx-bytes (:network summary)) (/ 1024) )) )]
+               [:td (str (gstring/format "%.2fMB" (-> (:read-io (:block-io summary)) (/ 1024) (/ 1024) )) 
+                         " / " 
+                         (gstring/format "%.2fMB" (-> (:write-io (:block-io summary)) (/ 1024) (/ 1024) )) )]
+               ]])]]]) })))
 
 (defn info-view
   "コンテナの情報"
