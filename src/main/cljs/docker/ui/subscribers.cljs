@@ -14,3 +14,4 @@
  (fn [db]      
    (reaction (:current-view @db))))
 
+

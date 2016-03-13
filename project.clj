@@ -11,6 +11,7 @@
                  [secretary "1.2.3"]
                  [reagent-utils "0.1.7"]
                  [re-frame "0.7.0-alpha-2"]
+                 [prismatic/schema  "1.0.5"]
                  ;server
                  [compojure "1.3.4"]
                  [ring  "1.4.0"]

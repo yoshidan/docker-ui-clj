@@ -4,6 +4,8 @@
    [ajax.core :as ajax]
    [reagent.core :as reagent]
    [re-frame.core :as re-frame]
+   [goog.string :as gstring]
+   goog.string.format
    [accountant.core :as accountant]))
 
 (defn- failure-result
@@ -19,7 +21,6 @@
    [:div.alert.alert-success {:role "alert"} (str id message)]])
 
 (defn default-view 
-  "URL直接指定などされた時のdisatch-currentでajax通信中でcurrent-pageがnilになるのを防止する"
   []
   [:div ])
 
@@ -77,20 +78,30 @@
           (for [container (:detail @stats-ratom) ]
             [:tr {:key (:id container) :on-click #(re-frame/dispatch [:navigate-info-view (:id container)]) } 
              [:td (:name container) ]
-             [:td (str (:percent (:cpu container)))]
-             [:td (str (:usage (:memory container)) " / " (:limit (:memory container)))]
-             [:td (str (:percent (:memory container)))]
-             [:td (str (:rx-bytes (:network container)) " / " (:tx-bytes (:network container)) )]
-             [:td (str (:read-io (:block-io container)) " / " (:write-io (:block-io container)) )]])]
-         (let [summary (:summary @stats-ratom)] 
+             [:td (gstring/format "%.2f" (:percent (:cpu container))) ]
+             [:td (str (gstring/format "%.2fMB" (-> (:usage (:memory container)) (/ 1024) (/ 1024))) 
+                       " / " 
+                       (gstring/format "%.2fGB" (-> (:limit (:memory container)) (/ 1024) (/ 1024) (/ 1024))))]
+             [:td (gstring/format "%.2f" (:percent (:memory container)))]
+             [:td (str (gstring/format "%.2fKB" (-> (:rx-bytes (:network container)) (/ 1024)  )) 
+                       " / " 
+                       (gstring/format "%.2fKB" (-> (:tx-bytes (:network container)) (/ 1024) )) )]
+             [:td (str (gstring/format "%.2fMB" (-> (:read-io (:block-io container)) (/ 1024) (/ 1024) )) 
+                       " / " 
+                       (gstring/format "%.2fMB" (-> (:write-io (:block-io container)) (/ 1024) (/ 1024) )) )]])]
+         (when-let [summary (:summary @stats-ratom)] 
            [:tfoot
             [:tr 
              [:th "SUM" ]
-             [:td (:percent (:cpu summary)) ]
-             [:td (:usage (:memory summary)) ]
+             [:td (gstring/format "%.2f" (:percent (:cpu summary))) ]
+             [:td (gstring/format "%.2fMB" (-> (:usage (:memory summary)) (/ 1024) (/ 1024) )) ]
              [:td ]
-             [:td (str (:rx-bytes (:network summary)) " / " (:tx-bytes (:network summary)) )]
-             [:td (str (:read-io (:block-io summary)) " / " (:write-io (:block-io summary)) )]
+             [:td (str (gstring/format "%.2fKB" (-> (:rx-bytes (:network summary)) (/ 1024) )) 
+                       " / " 
+                       (gstring/format "%.2fKB" (-> (:tx-bytes (:network summary)) (/ 1024) )) )]
+             [:td (str (gstring/format "%.2fMB" (-> (:read-io (:block-io summary)) (/ 1024) (/ 1024) )) 
+                       " / " 
+                       (gstring/format "%.2fMB" (-> (:write-io (:block-io summary)) (/ 1024) (/ 1024) )) )]
              ]])]]])))
 
 (defn info-view

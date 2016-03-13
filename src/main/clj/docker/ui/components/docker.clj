@@ -94,15 +94,15 @@
         cpu-percent (if (and (< 0 cpu-delta) (< 0 cpu-system-delta))  
                       (* 100 (* cpu-count (float (/ cpu-delta cpu-system-delta))))
                       0.0 )]
-     {:percent(format "%.2f%%" cpu-percent) }))
+     {:percent cpu-percent }))
 
 (defn- with-memory-stats
   [id edn]
   (let [usage (->> (:memory_stats edn) (:usage))
         limit (->> (:memory_stats edn ) (:limit))]
-   {:percent (format "%.2f%%" (* 100 (float (/ usage limit)))) 
-    :usage (format "%dMB" (-> (/ usage 1024) (/ 1024) (int)))
-    :limit (format "%.2fGB" (-> (/ limit 1024) (/ 1024) (/ 1024) (float)))} ))
+   {:percent (* 100 (float (/ usage limit)))
+    :usage usage 
+    :limit limit} ))
 
 (defn- with-block-io-stats
   [id edn]
@@ -116,15 +116,15 @@
                       (filter #(= (:op %) "Write"))
                       (map #(:value %))
                       (reduce +))]
-    {:read-io (format "%dKB" (-> (/ read-io 1024) (int)))
-     :write-io (format "%dKB" (-> (/ write-io 1024) (int)))}))
+    {:read-io read-io 
+     :write-io write-io}))
 
 (defn- with-network-stats
   [id edn]
   (let [rx-bytes (->> (:networks edn) (vals) (map #(:rx_bytes %)) (reduce +) )
         tx-bytes (->> (:networks edn) (vals) (map #(:tx_bytes %)) (reduce +))]
-   {:rx-bytes (format "%.2fMB" (-> (/ rx-bytes 1024) (/ 1024) (float) ))
-    :tx-bytes (format "%.2fMB" (-> (/ tx-bytes 1024) (/ 1024) (float))) }))
+   {:rx-bytes rx-bytes 
+    :tx-bytes tx-bytes }))
 
 (defn- stats
   "統計の取得"
@@ -151,22 +151,12 @@
   "合計の取得"
   [details]
   (when-not (empty? details) 
-    {:memory {:usage (->> (map #(Integer/parseInt (string/replace (:usage (:memory %)) #"MB" "")) details) 
-                          (reduce +) (format "%dMB") ) }
-     :cpu {:percent (->> (map #(Float/parseFloat (string/replace (:percent (:cpu %)) #"%" "")) details) 
-                         (reduce +) (format "%.2f%%") ) }
-     :network {:rx-bytes (->> (map #(Float/parseFloat 
-                                     (string/replace (:rx-bytes (:network %)) #"MB" "")) details) 
-                              (reduce +) (format "%.2fMB") ) 
-               :tx-bytes (->> (map #(Float/parseFloat 
-                                     (string/replace  (:tx-bytes (:network %)) #"MB" "")) details) 
-                              (reduce +) (format "%.2fMB") ) }
-     :block-io {:read-io (->> (map #(Integer/parseInt 
-                                     (string/replace (:read-io (:block-io %)) #"KB" "")) details) 
-                              (reduce +) (format "%dKB") ) 
-                :write-io (->> (map #(Integer/parseInt 
-                                      (string/replace (:write-io (:block-io %)) #"KB" "")) details) 
-                               (reduce +) (format "%dKB") ) }}))
+    {:memory {:usage (->> (map #(:usage (:memory %)) details) (reduce +)) }
+     :cpu {:percent (->> (map #(:percent (:cpu %)) details) (reduce +)) }
+     :network {:rx-bytes (->> (map #(:rx-bytes (:network %)) details) (reduce +)) 
+               :tx-bytes (->> (map #(:tx-bytes (:network %)) details) (reduce +)) }
+     :block-io {:read-io (->> (map #(:read-io (:block-io %)) details) (reduce +)) 
+                :write-io (->> (map #(:write-io (:block-io %)) details) (reduce +)) }}))
 
 (defn stats-all 
   "利用可能な全コンテナのdocker-statsを実行する"
@@ -196,10 +186,10 @@
                      {:name id 
                       :id (:Id container)
                       :down true
-                      :memory {:percent "0%" :usage "0MB" :limit "0GB"}
-                      :network {:rx-bytes "0MB" :tx-bytes "0MB"} 
-                      :block-io {:read-io "0KB" :write-io "0KB"} 
-                      :cpu {:percent "0%"}})
+                      :memory {:percent 0 :usage 0 :limit 0}
+                      :network {:rx-bytes 0 :tx-bytes 0} 
+                      :block-io {:read-io 0 :write-io 0} 
+                      :cpu {:percent 0}})
               (swap! stats-processing dissoc id))
             (catch Exception e
               (println "container " id " removed")
