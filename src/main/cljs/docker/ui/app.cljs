@@ -2,7 +2,7 @@
   (:require
    [docker.ui.views :as view]
    [docker.ui.handlers :as handlers]
-   [docker.ui.subscribers :as subscribers]
+   [docker.ui.subs :as subscribers]
    [docker.ui.routes :as routes]
    [accountant.core :as accountant]
    [reagent.core :as reagent]

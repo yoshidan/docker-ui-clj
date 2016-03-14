@@ -68,9 +68,8 @@
      {:component-did-mount 
       (fn []
         (go 
-         (let  
-           [url (str "ws://" (.host (.-location js/window)) "/ws/docker/stats")
-            {:keys [ws-channel]}  (<! (ws-ch url (:format :edn) ))]
+         (let [url (str "ws://" (.-host (.-location js/window)) "/ws/docker/stats")
+              {:keys [ws-channel]}  (<! (ws-ch url (:format :edn) ))]
            (loop []
              (let [{:keys  [message error]}  (<! ws-channel)]
                (if error

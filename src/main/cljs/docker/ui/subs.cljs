@@ -1,4 +1,4 @@
-(ns docker.ui.subscribers
+(ns docker.ui.subs
   (:require-macros 
    [reagent.ratom :refer  [reaction]])
   (:require
