@@ -9,8 +9,7 @@
    [reagent.core :as reagent]
    [re-frame.core :as re-frame]
    [goog.string :as gstring]
-   goog.string.format
-   [accountant.core :as accountant]))
+   goog.string.format))
 
 (defn- failure-result
   [id message]
@@ -69,7 +68,7 @@
       (fn []
         (go 
          (let [url (str "ws://" (.-host (.-location js/window)) "/ws/docker/stats")
-              {:keys [ws-channel]}  (<! (ws-ch url (:format :edn) ))]
+              {:keys [ws-channel]}  (<! (ws-ch url {:format :edn}))]
            (loop []
              (let [{:keys  [message error]}  (<! ws-channel)]
                (if error
@@ -93,7 +92,7 @@
              [:th "BLOCK I/O"]]]
            [:tbody 
             (for [container (:detail @stats-ratom) ]
-              [:tr {:key (:id container) :on-click #(re-frame/dispatch [:navigate-info-view (:id container)]) } 
+              [:tr {:key (:id container) :on-click #(re-frame/dispatch [:navigate (str "/containers/" (:id container)) ]) } 
                [:td (:name container) ]
                [:td (gstring/format "%.2f" (:percent (:cpu container))) ]
                [:td (str (gstring/format "%.2fMB" (-> (:usage (:memory container)) (/ 1024) (/ 1024))) 
@@ -151,10 +150,10 @@
                 [:span.with-link running ]
                 (case running
                   "running" [:button.btn.btn-danger.btn-sm 
-                             {:on-click #(accountant/navigate! (str "/containers/" (get edn "Id") "/stop")) }
+                             {:on-click #(re-frame/dispatch [:navigate (str "/containers/" (get edn "Id") "/stop")] ) }
                              "stop" ]
                   "exited" [:button.btn.btn-primary.btn-sm 
-                            {:on-click #(accountant/navigate! (str "/containers/" (get edn "Id") "/start")) } 
+                            {:on-click #(re-frame/dispatch [:navigate (str "/containers/" (get edn "Id") "/start")] ) } 
                             "start"])]) ]]
            [:tr {:key 2} [:th "再起動中？"] [:td (if-let [restarting (get status "Restarting")] restarting "false")]]
            [:tr {:key 3} [:th "開始時刻"] [:td (get status "StartedAt")]]

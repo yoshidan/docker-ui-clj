@@ -60,8 +60,6 @@
       (log/error "Failed, status = %s, body = %s" status body)
       (f/fail (format "external system status error [%s] [%s]" status body)) ))))
 
-
-
 (defn- ps
   "全コンテナ取得"
   []
@@ -210,12 +208,10 @@
   [subscriber]
   (async/sub exchange :docker-stats subscriber))
 
-
 (defn unsubscribe-stats
   "statsの結果をunsubscribeする"
   [subscriber]
   (async/unsub exchange :docker-stats subscriber))
-
 
 (defn container
   "コンテナの情報取得"

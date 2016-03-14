@@ -17,11 +17,18 @@
  (fn [db [_ stats]]
    (assoc db :stats stats )))
 
-;画面遷移する
+;表示画面を切り替える
 (re-frame/register-handler 
  :change-view 
  (fn [db [_ page]]
    (assoc db :current-view page)))
+
+;画面遷移する
+(re-frame/register-handler
+ :navigate
+ (fn [db [_ url]]
+   (accountant/navigate! url) 
+   db))
 
 ;コンテナ情報取得成功
 (re-frame/register-handler              
@@ -52,7 +59,7 @@
 (re-frame/register-handler
  :navigate-info-view
  (fn [db [_ id]]
-   (accountant/navigate! (str "/containers/" id))
+   (accountant/navigate! )
    db))
 
 ;コンテナ開始成功
@@ -100,7 +107,5 @@
              {:handler (fn [res] (re-frame/dispatch [:stop-container-success id]) )
               :error-handler (fn [e] (re-frame/dispatch [:stop-container-failure id])) }) 
    (assoc db :loading? true)))
-
-
 
 
