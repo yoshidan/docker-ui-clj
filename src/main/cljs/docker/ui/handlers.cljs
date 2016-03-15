@@ -55,13 +55,6 @@
               :error-handler (fn [e] (re-frame/dispatch [:inspect-container-failure e])) }) 
    (assoc db :loading? true)))
 
-;コンテナ情報ページに遷移する
-(re-frame/register-handler
- :navigate-info-view
- (fn [db [_ id]]
-   (accountant/navigate! )
-   db))
-
 ;コンテナ開始成功
 (re-frame/register-handler 
  :start-container-success 
