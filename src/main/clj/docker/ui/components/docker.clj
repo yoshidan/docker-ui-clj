@@ -180,7 +180,7 @@
     (doseq [id-in-stats (keys @docker-stats)]
       (when-not (.contains id-list id-in-stats)
         (do (swap! docker-stats dissoc id-in-stats)
-            (println "container " id-in-stats " removed"))))
+            (log/info "container " id-in-stats " removed"))))
     (->> 
      (filter #(not (contains? @stats-processing (named-id %))) containers )
      (map  
