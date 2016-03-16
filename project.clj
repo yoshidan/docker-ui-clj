@@ -20,6 +20,9 @@
                  [http-kit "2.1.18"]
                  [hiccup  "1.0.5"]
                  [enlive  "1.1.6"]
+                 [http.async.client  "0.3.1"]
+                 [org.slf4j/slf4j-api  "1.7.0"]
+                 [ch.qos.logback/logback-classic  "1.0.13"]
                  ;redis
                  [com.taoensso/carmine  "2.10.0"] 
                  ;core

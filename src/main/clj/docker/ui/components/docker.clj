@@ -2,13 +2,16 @@
   (:require
    [clojure.java.io :as io]
    [clojure.string :as string ]
-   [org.httpkit.client :as http] 
+   [org.httpkit.client :as http]
+   [http.async.client :as client] 
+   [http.async.client.request :as request] 
    [docker.ui.components.failure :as f]
    [environ.core :refer [env] :as environ]
    [clojure.tools.logging :as log]
    [clojure.core.async :as async]
-   [cheshire.core :as json ]))
+   [cheshire.core :as json ] ))
 
+(def ^:private client (client/create-client))
 (def ^:private docker-tcp-address (environ/env :docker-tcp-address))
 
 ;docker statsの結果、container-idがキー
@@ -22,15 +25,6 @@
 (defn- named-id
   [container]
   (apply str (rest (first (:Names container)))))
-
-(defn- async-get 
-  [url opt ]
-  (log/infof url)
-  (http/get url (merge opt {:timeout 2000})) )
-
-(defn- async-post
-  [url]
-  (http/post url {:timeout 2000}))
 
 (defn- handle-get
   [response]
@@ -64,8 +58,9 @@
   "全コンテナ取得"
   []
   (let [url (format "http://%s/containers/json?all=1" docker-tcp-address) ]
+    (log/info url)
     (f/attempt-all
-     [response (async-get url {:as :text} )
+     [response (http/get url{:as :text :timeout 2000}) 
       body (handle-get response)] 
      (json/parse-string body true))))
  
@@ -129,21 +124,41 @@
   [container] 
   (let [id (named-id container) 
         url (format "http://%s/containers/%s/stats" docker-tcp-address id)
-        #^java.net.URLConnection con (->> (java.net.URL. url) (.openConnection)  )]
-    (.setReadTimeout con 3000) 
-    ;停止中のコンテナはreadTimeoutになる
-    (readLine 
-     (io/reader (.getInputStream con)) 
-     (fn [data]
-       (let [edn (json/parse-string data true)]
-         (swap! docker-stats assoc id 
-                {:name id 
-                 :id (:Id container)
-                 :down false
-                 :memory (with-memory-stats id edn)
-                 :network (with-network-stats id edn)
-                 :block-io (with-block-io-stats id edn)
-                 :cpu (with-cpu-stats id edn)} ))))))
+        prepared (request/prepare-request :get url :timeout 2000)]
+    (log/info "get stats" url)
+    ;live-stream
+    (request/execute-request 
+     client
+     prepared
+     :headers (fn [status e] (log/info "header" e))
+     :status (fn [status e] (log/info "status" e))
+     :error (fn [status e] 
+              ;timeout = stopped container
+              (if (instance? java.util.concurrent.TimeoutException e)
+                (do (log/info "container " id " stop")
+                    (swap! docker-stats assoc id 
+                           {:name id 
+                            :id  (:Id container)
+                            :down true
+                            :memory  {:percent 0 :usage 0 :limit 0}
+                            :network  {:rx-bytes 0 :tx-bytes 0} 
+                            :block-io  {:read-io 0 :write-io 0} 
+                            :cpu  {:percent 0}})
+                    (swap! stats-processing dissoc id))
+                (do (log/info "container " id " removed") 
+                    (swap! docker-stats dissoc id)
+                    (swap! stats-processing dissoc id))))
+     :part  (fn [status body]
+              (let [edn (json/parse-string (String. (.toByteArray body)) true)] 
+                (swap! docker-stats assoc id 
+                       {:name id 
+                        :id (:Id container)
+                        :down false
+                        :memory (with-memory-stats id edn)
+                        :network (with-network-stats id edn)
+                        :block-io (with-block-io-stats id edn)
+                        :cpu (with-cpu-stats id edn)} ))
+              [body :continue] ))))
 
 (defn- summary
   "合計の取得"
@@ -166,34 +181,14 @@
       (when-not (.contains id-list id-in-stats)
         (do (swap! docker-stats dissoc id-in-stats)
             (println "container " id-in-stats " removed"))))
-    ;非同期でstats取得
     (->> 
      (filter #(not (contains? @stats-processing (named-id %))) containers )
      (map  
       (fn [container] 
         (let [id (named-id container)]
+          ;stats処理中にする
           (swap! stats-processing assoc id true)
-          (async/go
-           []
-           (try
-            ;TODO 非同期IOにしてスレッド占有しないようにする
-            (stats container)
-            (catch java.net.SocketTimeoutException e
-              (println "container " id " stoped")
-              (swap! docker-stats assoc id 
-                     {:name id 
-                      :id (:Id container)
-                      :down true
-                      :memory {:percent 0 :usage 0 :limit 0}
-                      :network {:rx-bytes 0 :tx-bytes 0} 
-                      :block-io {:read-io 0 :write-io 0} 
-                      :cpu {:percent 0}})
-              (swap! stats-processing dissoc id))
-            (catch Exception e
-              (println "container " id " removed")
-              (swap! docker-stats dissoc id)
-              (swap! stats-processing dissoc id)))))))
-     (doall))))
+          (stats container))))(doall)) ))
 
 (defn publish-stats
   "statsの結果をpublishする"
@@ -219,7 +214,7 @@
   (let [url (format "http://%s/containers/%s/json" docker-tcp-address id) ]
     (log/infof url)
     (f/attempt-all
-     [response (async-get url {:as :text} )
+     [response (http/get url {:as :text :timeout 2000}) 
       body (handle-get response)] 
      ;ednだとcljs側で数字始まりがparse-errorになるため
      (json/parse-string body))))
@@ -230,7 +225,7 @@
   (let [url (format "http://%s/containers/%s/start" docker-tcp-address id) ]
     (log/infof url)
     (f/attempt-all
-     [response (async-post url)]
+     [response (http/post url {:timeout 2000})]
      (handle-post response))))
 
 (defn stop
@@ -239,5 +234,5 @@
   (let [url (format "http://%s/containers/%s/stop" docker-tcp-address id) ]
     (log/infof url)
     (f/attempt-all
-     [response (async-post url)]
+     [response (http/post url {:timeout 2000})]
      (handle-post response))))
