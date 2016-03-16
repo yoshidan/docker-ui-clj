@@ -38,7 +38,7 @@
                  ;java
                  [commons-lang/commons-lang "2.6"]]
 
-  :repl-options {:init-ns docker.ui.repl}
+  :repl-options {:init-ns docker.ui.server}
   :uberjar-name "docker.ui.jar"
   :source-paths ["src/main/clj"]
   :resource-paths ["src/main/resources"]
