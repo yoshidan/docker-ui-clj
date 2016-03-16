@@ -63,14 +63,6 @@
      [response (http/get url{:as :text :timeout 2000}) 
       body (handle-get response)] 
      (json/parse-string body true))))
- 
-(defn- readLine 
-  [rdr consumer]
-  (let [temp (.readLine rdr)] 
-    (when (not (nil? temp))
-      (do 
-       (consumer temp)
-       (recur rdr consumer)))))
 
 (defn- nvl [v default]
    (if (nil? v) default v))
