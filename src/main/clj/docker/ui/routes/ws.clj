@@ -31,7 +31,7 @@
            (if-not (>! channel response)
              (do
               (docker/unsubscribe-stats subscriber) 
-              (close-channel! channel  "can't send server time."))
+              (close-channel! channel  "can't publish docker stats."))
              (recur))))))))
     "Not Supported (use websocket)"
 
